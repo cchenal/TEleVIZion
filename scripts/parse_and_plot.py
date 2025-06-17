@@ -251,7 +251,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     genome = args.genome
-    file = args.repeatmasker
+    file = args.repeatmasker # to be modified when several tools will be available
     window_size = args.windowsize
 
     ### CODE
