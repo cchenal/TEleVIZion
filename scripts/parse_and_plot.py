@@ -1,6 +1,9 @@
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from matplotlib.colors import to_hex
+import pandas as pd
 
 def define_windows(genome_file, window_size):
     windows = {}
@@ -236,6 +239,285 @@ def plot_total_repeat_content(repeats_dict, insertions_dict):
     # plt.savefig("analyses/test_total.png")
     # plt.close()
 
+def plot_family_insertions_by_class(insertions):
+    """
+    Generate two color‐coded bar charts for transposable element insertions,
+    grouping repeat families contiguously by repeat class:
+      1. Total insertion counts per repeat family
+      2. Total bases impacted per repeat family
+    Bars are colored by repeat class with a legend.
+    """
+    # Flatten nested dict into records
+    records = []
+    for chrom_windows in insertions.values():
+        for classes in chrom_windows.values():
+            for rep_class, families in classes.items():
+                for rep_family, metrics in families.items():
+                    records.append({
+                        'rep_class':  rep_class,
+                        'rep_family': rep_family,
+                        'count':      metrics['count'],
+                        'length':     metrics['length']
+                    })
+
+    # Create DataFrame and aggregate per class-family
+    df = pd.DataFrame(records)
+    agg = (
+        df.groupby(['rep_class', 'rep_family'])[['count', 'length']]
+          .sum()
+          .reset_index()
+    )
+
+    # Determine class order by total count desc
+    class_order = (
+        agg.groupby('rep_class')['count']
+           .sum()
+           .sort_values(ascending=False)
+           .index
+           .tolist()
+    )
+
+    # Build overall family order and corresponding values
+    order = []
+    counts = []
+    lengths = []
+    bar_classes = []
+    for cls in class_order:
+        fams = (
+            agg[agg['rep_class'] == cls]
+            .sort_values('count', ascending=False)
+            ['rep_family']
+            .tolist()
+        )
+        for fam in fams:
+            order.append(fam)
+            bar_classes.append(cls)
+            row = agg[(agg['rep_class'] == cls) & (agg['rep_family'] == fam)]
+            counts.append(int(row['count']))
+            lengths.append(int(row['length']))
+
+    # Assign colors to classes
+    cmap = plt.get_cmap('tab10')
+    class_colors = {cls: cmap(i % 10) for i, cls in enumerate(class_order)}
+
+    # Create legend handles
+    legend_handles = [mpatches.Patch(color=class_colors[cls], label=cls) 
+                      for cls in class_order]
+
+    # Plot total counts
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.bar(range(len(order)), counts, color=[class_colors[c] for c in bar_classes], edgecolor='black')
+    ax.set_xticks(range(len(order)))
+    ax.set_xticklabels(order, rotation=90, fontsize=8)
+    ax.set_xlabel('Repeat family (grouped by class)')
+    ax.set_ylabel('Insertion count')
+    ax.set_title('Total Insertions per Repeat Family by Class')
+    ax.legend(handles=legend_handles, title='Repeat class', bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.tight_layout()
+    plt.savefig("analyses/test_counts.png")
+
+    # Plot total lengths
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.bar(range(len(order)), lengths, color=[class_colors[c] for c in bar_classes], edgecolor='black')
+    ax.set_xticks(range(len(order)))
+    ax.set_xticklabels(order, rotation=90, fontsize=8)
+    ax.set_xlabel('Repeat family (grouped by class)')
+    ax.set_ylabel('Total bases impacted')
+    ax.set_title('Total Base Impact per Repeat Family by Class')
+    ax.legend(handles=legend_handles, title='Repeat class', bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.tight_layout()
+    plt.savefig("analyses/test_length.png")
+
+plt.rcParams['font.family'] = 'Tahoma'
+
+def plot_family_insertions_stacked_by_class(insertions):
+    
+    # Flatten nested dict into records
+    records = []
+    for chrom_windows in insertions.values():
+        for classes in chrom_windows.values():
+            for rep_class, families in classes.items():
+                for rep_family, metrics in families.items():
+                    records.append({
+                        'rep_class':  rep_class,
+                        'rep_family': rep_family,
+                        'count':      metrics['count'],
+                        'length':     metrics['length']
+                    })
+
+    # Aggregate
+    df = pd.DataFrame(records)
+    agg = df.groupby(['rep_class', 'rep_family'])[['count', 'length']].sum().reset_index()
+
+    # Determine class order
+    class_order = (
+        agg.groupby('rep_class')['count']
+           .sum()
+           .sort_values(ascending=False)
+           .index
+           .tolist()
+    )
+
+    # Base colors from rainbow
+    cmap = plt.get_cmap('turbo')
+    class_colors = {
+        cls: cmap(i / max(len(class_order)-1, 1))
+        for i, cls in enumerate(class_order)
+    }
+
+    # Replace underscores in class labels with newline for x-axis
+    x_labels = [cls.replace('_', '\n') for cls in class_order]
+    x = np.arange(len(class_order))
+
+    def _plot(metric, fname, ylabel, title):
+        fig, ax = plt.subplots(figsize=(9, 8))
+        # Plot stacks
+        for i, cls in enumerate(class_order):
+            fams = agg[agg['rep_class'] == cls]['rep_family'].tolist()
+            alphas = np.linspace(1.0, 0.3, len(fams))
+            bottom = 0
+            total = 0
+            for fam, alpha in zip(fams, alphas):
+                val = agg.loc[
+                    (agg['rep_class'] == cls) & (agg['rep_family'] == fam),
+                    metric
+                ].values[0]
+                ax.bar(i, val, bottom=bottom, width=0.4,
+                       color=class_colors[cls], alpha=alpha)
+                bottom += val
+                total += val
+            ax.text(i, total, str(total), ha='center', va='bottom')
+
+        # Build legend with family values
+        legend_handles = []
+        for cls in class_order:
+            fams = agg[agg['rep_class'] == cls]['rep_family'].tolist()
+            alphas = np.linspace(1.0, 0.3, len(fams))
+            for fam, alpha in zip(reversed(fams), reversed(alphas)):
+                val = agg.loc[
+                    (agg['rep_class'] == cls) & (agg['rep_family'] == fam),
+                    metric
+                ].values[0]
+                label = f"{fam} ({val})"
+                legend_handles.append(
+                    mpatches.Patch(color=class_colors[cls], alpha=alpha, label=label)
+                )
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(x_labels, rotation=0)
+        ax.set_xlabel('Repeat class', weight='bold', labelpad=12)
+        ax.set_ylabel(ylabel, weight='bold', labelpad=12)
+        ax.set_title(title, weight='bold', pad=20)
+        ax.legend(handles=legend_handles, title='Families',
+                  loc='upper left', bbox_to_anchor=(1.05, 1),
+                  ncol=1, fontsize='small')
+        plt.tight_layout()
+        fig.savefig(f'analyses/{fname}', bbox_inches='tight')
+
+    # Generate plots
+    _plot('count', 'stacked_counts_by_class.png',
+          'Insertion count', 'Stacked Insertion Counts per Class by Family')
+    _plot('length', 'stacked_lengths_by_class.png',
+          'Total bases impacted', 'Stacked Base Impact per Class by Family')
+
+def plot_family_insertions_stacked_by_class_per_chromosome(insertions):
+
+    # Common colormap
+    cmap = plt.get_cmap('turbo')
+
+    for chrom, windows in insertions.items():
+        # Flatten for this chromosome
+        records = []
+        for classes in windows.values():
+            for rep_class, families in classes.items():
+                for rep_family, metrics in families.items():
+                    records.append({
+                        'rep_class':  rep_class,
+                        'rep_family': rep_family,
+                        'count':      metrics['count'],
+                        'length':     metrics['length']
+                    })
+        df = pd.DataFrame(records)
+        if df.empty:
+            continue
+
+        # Aggregate and determine order
+        agg = df.groupby(['rep_class', 'rep_family'])[['count', 'length']].sum().reset_index()
+        class_order = (
+            agg.groupby('rep_class')['count']
+               .sum()
+               .sort_values(ascending=False)
+               .index
+               .tolist()
+        )
+        # Assign class colors
+        class_colors = {
+            cls: cmap(i / max(len(class_order)-1, 1))
+            for i, cls in enumerate(class_order)
+        }
+        # Prepare x-axis labels
+        x_labels = [cls.replace('_', '\n') for cls in class_order]
+        x = np.arange(len(class_order))
+
+        def _plot(metric, fname, ylabel, title):
+            fig, ax = plt.subplots(figsize=(9, 8))
+            # Plot stacks
+            for i, cls in enumerate(class_order):
+                fams = agg[agg['rep_class'] == cls]['rep_family'].tolist()
+                alphas = np.linspace(1.0, 0.3, len(fams))
+                bottom = 0
+                total = 0
+                for fam, alpha in zip(fams, alphas):
+                    val = agg.loc[
+                        (agg['rep_class'] == cls) & (agg['rep_family'] == fam),
+                        metric
+                    ].values[0]
+                    ax.bar(i, val, bottom=bottom, width=0.4,
+                           color=class_colors[cls], alpha=alpha)
+                    bottom += val
+                    total += val
+                ax.text(i, total, str(total), ha='center', va='bottom')
+
+            # Build legend
+            legend_handles = []
+            for cls in class_order:
+                fams = agg[agg['rep_class'] == cls]['rep_family'].tolist()
+                alphas = np.linspace(1.0, 0.3, len(fams))
+                for fam, alpha in zip(reversed(fams), reversed(alphas)):
+                    val = agg.loc[
+                        (agg['rep_class'] == cls) & (agg['rep_family'] == fam),
+                        metric
+                    ].values[0]
+                    label = f"{fam} ({val})"
+                    legend_handles.append(
+                        mpatches.Patch(color=class_colors[cls], alpha=alpha, label=label)
+                    )
+
+            ax.set_xticks(x)
+            ax.set_xticklabels(x_labels, rotation=0)
+            ax.set_xlabel('Repeat class', weight='bold', labelpad=12)
+            ax.set_ylabel(ylabel, weight='bold', labelpad=12)
+            ax.set_title(title, weight='bold', pad=20)
+            ax.legend(handles=legend_handles, title='Families',
+                      loc='upper left', bbox_to_anchor=(1.05, 1),
+                      ncol=1, fontsize='small')
+            plt.tight_layout()
+            fig.savefig(f'analyses/{fname}', bbox_inches='tight')
+            plt.close(fig)
+
+        # Create per-chromosome plots
+        _plot('count',
+              f'{chrom}_stacked_counts.png',
+              'Insertion count',
+              f'Stacked Insertion Counts per Class by Family in chromosome {chrom}')
+        _plot('length',
+              f'{chrom}_stacked_lengths.png',
+              'Total bases impacted',
+              f'Stacked Base Impact per Class by Family in chromosome {chrom}')
+
+
+
+
 
 
 if __name__ == "__main__":
@@ -268,4 +550,7 @@ if __name__ == "__main__":
 
 
     # print(repeats)
-    plot_total_repeat_content(repeats, insertions)
+    # plot_total_repeat_content(repeats, insertions)
+    # plot_family_insertions_by_class(insertions)
+    # plot_family_insertions_stacked_by_class(insertions)
+    plot_family_insertions_stacked_by_class_per_chromosome(insertions)
