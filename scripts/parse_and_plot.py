@@ -1,9 +1,11 @@
+import os
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.colors import to_hex
 import pandas as pd
+import subprocess
 
 def define_windows(genome_file, window_size):
     windows = {}
@@ -229,6 +231,103 @@ def plot_family_insertions(insertions, per_chromosome=False):
 
     return fam_colors
 
+# def export_insertions_for_karyoploter_fam(insertions, fam_colors, output_bed):
+#     """
+#     Flatten per-window, per-class insertion lengths and export to a BED-like file
+#     enriched with colors for karyoploteR.
+    
+#     Assumes `insertions[chrom][window_label][rep_class][rep_family] = {'count', 'length'}` 
+#     where window_label is "chr-start-end".
+    
+#     Args:
+#       insertions: nested dict of insertions by chromosome and window_label.
+#       fam_colors: dict mapping rep_class -> rep_family -> RGBA tuple.
+#       output_bed: path to write the tab-delimited file
+      
+#     Generates a file with columns:
+#       chrom  start   end   rep_class   rep_family   length    color
+#     """
+#     os.makedirs(os.path.dirname(output_bed) or '.', exist_ok=True)
+#     rows = []
+#     for chrom, win_dict in insertions.items():
+#         for win_label, class_dict in win_dict.items():
+#             # win_label expected "chr-start-end"
+#             parts = win_label.split('-')
+#             if len(parts) != 3:
+#                 continue
+#             _, start_str, end_str = parts
+#             start = int(start_str) - 1  # convert to 0-based
+#             end = int(end_str)
+#             for rep_class, families in class_dict.items():
+#                 for rep_family, metrics in families.items():
+#                     length = metrics.get('length', 0)
+#                     rgba = fam_colors.get(rep_class, {}).get(rep_family, (0,0,0,1))
+#                     color = to_hex(rgba, keep_alpha=True)
+#                     rows.append({
+#                         'chrom':      chrom,
+#                         'start':      start,
+#                         'end':        end,
+#                         'rep_class':  rep_class,
+#                         'rep_family': rep_family,
+#                         'length':     length,
+#                         'color':      color
+#                     })
+#     df = pd.DataFrame(rows)
+#     df.to_csv(output_bed, sep='\t', index=False)
+
+def export_class_insertions_for_karyoploter(insertions, fam_colors, output_bed):
+    """
+    Flatten per-window, per-class total insertion lengths and export to a BED-like file
+    enriched with class colors (using the first family's color).
+    
+    Args:
+      insertions: nested dict of insertions by chromosome and window_label.
+                  insertions[chrom][window_label][rep_class][rep_family] = {'count', 'length'}
+      fam_colors: dict mapping rep_class -> rep_family -> RGBA tuple
+      output_bed: path to write the tab-delimited file
+      
+    Generates a file with columns:
+      chrom  start   end   rep_class   length    color
+    where length is total across all families and color is the hex RGBA of the first family.
+    """
+    # Ensure output directory exists
+    os.makedirs(os.path.dirname(output_bed) or '.', exist_ok=True)
+    
+    rows = []
+    for chrom, win_dict in insertions.items():
+        for win_label, class_dict in win_dict.items():
+            parts = win_label.split('-')
+            if len(parts) != 3:
+                continue
+            _, start_str, end_str = parts
+            start = int(start_str) - 1  # convert to 0-based for BED
+            end = int(end_str)
+            
+            for rep_class, families in class_dict.items():
+                # Sum lengths across families
+                total_length = sum(metrics.get('length', 0) for metrics in families.values())
+                # Choose color of the first family in fam_colors[rep_class]
+                fam_list = list(fam_colors.get(rep_class, {}).keys())
+                if fam_list:
+                    first_family = fam_list[0]
+                    rgba = fam_colors[rep_class][first_family]
+                else:
+                    rgba = (0, 0, 0, 1)
+                color = to_hex(rgba, keep_alpha=True)
+                
+                rows.append({
+                    'chrom':     chrom,
+                    'start':     start,
+                    'end':       end,
+                    'rep_class': rep_class,
+                    'length':    total_length,
+                    'color':     color
+                })
+    
+    df = pd.DataFrame(rows)
+    df.to_csv(output_bed, sep='\t', index=False)
+
+
 
 
 
@@ -250,19 +349,23 @@ if __name__ == "__main__":
 
     ### CODE
 
+    # Define windows 
+
     windows = define_windows(
         genome_file = genome, 
         window_size = window_size
     )
+
+    # Detect repeats and repeat types
 
     repeats, insertions = parse_repeatmasker_output(
         repeatmasker_file = file,
         windows_dict = windows
     )
 
+    # Plots (whole genome or list of chromosomes)
 
-    # print(repeats)
-    # plot_total_repeat_content(repeats, insertions)
-    # plot_family_insertions_by_class(insertions)
-    colors = plot_family_insertions(insertions, per_chromosome=True)
-    print(colors)
+    colors = plot_family_insertions(insertions, per_chromosome=False)
+    # export_class_insertions_for_karyoploter(insertions, colors, "analyses/insertions_by_window_class.bed")
+    # cmd = "Rscript scripts/plot_chromosomes.R --genome data/genomes/Ngousso/chromosomes_chr.tsv --chromosome Chr_2R,Chr_2L,Chr_3R,Chr_3L,Chr_X --accessibility data/genomes/Ngousso/accessibility.tsv --out analyses/karyoplotr.png".split(" ")
+    # subprocess.run(cmd, check=True)

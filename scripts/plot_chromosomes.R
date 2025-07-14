@@ -46,12 +46,6 @@ if (is.character(opt$chromosomes)){
 }
 
 if (is.character(opt$accessibility)){
-    # acc_table <- read.table(file = opt$accessibility)
-    # accessibility <- toGRanges(
-    #     seqnames = acc_table$chromosome,
-    #     ranges = IRanges(start = acc_table$start, end = acc_table$end),
-    #     name = acc_table$name,
-    #     itemRgb = acc_table$itemRgb)
     accessibility <- toGRanges(opt$accessibility)
 }
 
