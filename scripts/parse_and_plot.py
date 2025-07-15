@@ -141,6 +141,16 @@ def plot_family_insertions(insertions, per_chromosome=False):
     cmap = plt.get_cmap('turbo')
     n = max(len(class_order)-1,1)
     class_colors = {cls: cmap(i/n) for i,cls in enumerate(class_order)}
+    # # Re‐cast to pure Python floats:
+    # class_colors_py = {
+    #     cls: tuple(float(x) for x in rgba)
+    #     for cls, rgba in class_colors.items()
+    # }
+    # Convert to hex strings (including the alpha channel):
+    class_colors_hex = {
+        cls: to_hex(rgba, keep_alpha=True)
+        for cls, rgba in class_colors.items()
+    }
 
     # Family alpha mapping
     fam_colors = {}
@@ -229,9 +239,9 @@ def plot_family_insertions(insertions, per_chromosome=False):
             _plot_contiguous(agg_chr,'count','Insertion count',f'Counts by Family in chromosome {chrom}',f'{chrom}_contiguous_counts_by_class.png')
             _plot_contiguous(agg_chr,'length','Base pair span',f'Lengths by Family in chromosome {chrom}',f'{chrom}_contiguous_lengths_by_class.png')
     
-    return class_colors, fam_colors
+    return(class_colors_hex, fam_colors)
 
-def export_window_bed(insertions, windows, output_bed, class_order=None):
+def export_window_class_bed(insertions, windows, output_bed, class_colors, class_order=None):
     """
     Export a window-based summary BED file with per-class counts and lengths,
     optionally percentage of window span, and cumulative stacked counts.
@@ -271,13 +281,14 @@ def export_window_bed(insertions, windows, output_bed, class_order=None):
             _, start_s, end_s = parts
             start = int(start_s) - 1
             end = int(end_s)
-            row = {'chrom': chrom, 'start': start, 'end': end}
             window_len = end - start
+            window_karyoplotr = int(start + (window_len/2))
+            row = {'chrom': chrom, 'start': start, 'end': end, 'barycenter': window_karyoplotr}
             for cls in classes:
                 fams = insertions.get(chrom, {}).get(win_label, {}).get(cls, {})
                 cnt = sum(m['count'] for m in fams.values())
                 lng = sum(m['length'] for m in fams.values())
-                pct = (lng / window_len * 100) if window_len > 0 else 0
+                pct = (lng / window_len) if window_len > 0 else 0
                 row[f'{cls}_count'] = cnt
                 row[f'{cls}_length'] = lng
                 row[f'{cls}_pct'] = round(pct, 3)
@@ -299,7 +310,7 @@ def export_window_bed(insertions, windows, output_bed, class_order=None):
     df = pd.concat([df, stacked], axis=1)
 
     # Build final column order: chrom, start, end, then per class:
-    cols = ['chrom', 'start', 'end']
+    cols = ['chrom', 'start', 'end', 'barycenter']
     for cls in classes:
         cols.append(f'{cls}_count')
         cols.append(f'{cls}_count_stacked')
@@ -310,6 +321,12 @@ def export_window_bed(insertions, windows, output_bed, class_order=None):
     df = df[cols]
     df.to_csv(output_bed, sep='\t', index=False)
 
+    reversed_classes = ",".join(list(reversed(classes)))
+    tmp_colors = []
+    for cls in classes:
+        tmp_colors.append(class_colors[cls])
+    reversed_colors = ",".join(list(reversed(tmp_colors)))
+    return(reversed_classes, reversed_colors)
 
 
 
@@ -320,14 +337,21 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Funny description to come"
     )
+
     parser.add_argument("--genome", required=True, type=str)
     parser.add_argument("--repeatmasker", required=True, type=str) # To be changed when several tools available
     parser.add_argument("--windowsize", required=False, type=int, default=10000)
+    parser.add_argument("--classesorder", required=False, type=str, default=None)
+
     args = parser.parse_args()
 
     genome = args.genome
     file = args.repeatmasker # to be modified when several tools will be available
     window_size = args.windowsize
+    if args.classesorder != None:
+        classes_order = args.classesorder.split(",")
+    else:
+        classes_order = None
 
     ### CODE
 
@@ -348,9 +372,8 @@ if __name__ == "__main__":
     # Plots (whole genome or list of chromosomes)
 
     class_colors, fam_colors = plot_family_insertions(insertions, per_chromosome=False)
-    # export_class_insertions_for_karyoploter(insertions, colors, "analyses/insertions_by_window_class.bed")
+    reversed_classes, reversed_colors = export_window_class_bed(insertions, windows, "analyses/karyoplotr_tables/rep_classes.bed", class_colors, class_order=classes_order) 
+    cmd = "Rscript scripts/plot_chromosomes.R --genome data/genomes/Ngousso/chromosomes_chr.tsv --chromosome Chr_2R,Chr_2L,Chr_3R,Chr_3L,Chr_X --accessibility data/genomes/Ngousso/accessibility.tsv --input analyses/karyoplotr_tables/rep_classes.bed --classesorder " + reversed_classes + " --colorsorder " + reversed_colors + " --output analyses/karyoplotr.png"
+    subprocess.run(cmd.split(" "), check=True)
 
-    export_window_bed(insertions, windows, "analyses/karyoplotr_tables/rep_classes.bed", class_order=None) # ["DNA", "LINE", "LTR", "SINE"]
-
-    # cmd = "Rscript scripts/plot_chromosomes.R --genome data/genomes/Ngousso/chromosomes_chr.tsv --chromosome Chr_2R,Chr_2L,Chr_3R,Chr_3L,Chr_X --accessibility data/genomes/Ngousso/accessibility.tsv --out analyses/karyoplotr.png".split(" ")
-    # subprocess.run(cmd, check=True)
+# Usage: python3 scripts/parse_and_plot.py --repeatmasker data/RepeatMasker/ngousso_chr.fasta.out --genome data/genomes/Ngousso/chromosomes_chr.tsv --windowsize 500000 --classesorder Simple_repeat,Low_complexity,DNA,LINE,LTR,SINE,Undetermined

@@ -14,13 +14,16 @@ option_list = list(
   make_option(c("-g", "--genome"), type="character", default=NULL, help="genome file name, tabulated: [chr, start, end, name, gieStain]", metavar="character"), 
   make_option(c("-c", "--chromosomes"), type="character", default=NULL, help="chromosome order, use comma", metavar="character"), 
   make_option(c("-a", "--accessibility"), type="character", default=NULL, help="genome accessibility file name, tabulated: [chr, start, end, name, itemRgb]", metavar="character"), 
-  make_option(c("-o", "--out"), type="character", default=NULL, help="output file name [default= %default]", metavar="character")
+  make_option(c("-i", "--input"), type="character", default=NULL, help="input file name, tabulated: [chr, start, end, <areas>]", metavar="character"), 
+  make_option(c("-k", "--classesorder"), type="character", default=NULL, help="classes order, should be reversed for display purposes, use comma", metavar="character"), 
+  make_option(c("-l", "--colorsorder"), type="character", default=NULL, help="colors order, should be reversed for display purposes, use comma", metavar="character"), 
+  make_option(c("-o", "--output"), type="character", default=NULL, help="output file name [default= %default]", metavar="character")
 ); 
  
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
 
-if (is.null(opt$genome) | is.null(opt$out)){
+if (is.null(opt$genome) | is.null(opt$input) | is.null(opt$output)){
     print_help(opt_parser)
 }
 
@@ -28,12 +31,33 @@ if (is.null(opt$genome)){
   stop("Missing argument: -g <input file>", call.=FALSE)
 }
 
-if (is.null(opt$out)){
+if (is.null(opt$input)){
+  stop("Missing argument: -i <input file>", call.=FALSE)
+}
+
+if (is.null(opt$classesorder)){
+  stop("Missing argument: -k <list,of,classes>", call.=FALSE)
+} else {
+  classes_order <- unlist(strsplit(x = opt$classesorder, split = ","))
+}
+
+if (is.null(opt$colorsorder)){
+  stop("Missing argument: -l <list,of,colors>", call.=FALSE)
+} else {
+  colors_order <- unlist(strsplit(x = opt$colorsorder, split = ","))
+}
+
+if (is.null(opt$output)){
   stop("Missing argument: -o <output file>", call.=FALSE)
 }
 
 
 cat("\n### CODE ###\n\n")
+
+### Get the data 
+
+data <- read.csv(opt$input, sep="\t")
+
 
 ### Retrieve chromosomes informations
 
@@ -51,24 +75,29 @@ if (is.character(opt$accessibility)){
 
 ### Plotting 
 
-png(opt$out, width = 29.7, height = 8, units = "cm", res = 300)
+png(opt$output, width = 29.7, height = 8, units = "cm", res = 300)
 
 # Graphical parameters 
 pp <- getDefaultPlotParams(plot.type=4)
-pp$data1inmargin <- 25 
+pp$data1inmargin <- 12 
 pp$leftmargin <- 0.085
-pp$rightmargin <- 0.095
+pp$rightmargin <- 0.185
 pp$ideogramlateralmargin <- 0.01
 pp$data2inmargin <- 10
 
 # Plotting the outline of each chromosome
 kp <- plotKaryotype(
     genome = genome, 
-    cytobands = genome, 
+    # cytobands = genome, 
     chromosomes = chromosome_order, 
     plot.type = 4, 
-    plot.params = pp
+    plot.params = pp,
+    cex = 0.8
 )
+
+# kpAddCytobandLabels(
+#     karyoplot = kp
+# )
 
 # Painting loci according to their accessibility
 if (is.character(opt$accessibility)){
@@ -77,7 +106,8 @@ if (is.character(opt$accessibility)){
         labels = "Accessibility", 
         data.panel = "ideogram", 
         cex = 0.8, 
-        label.margin = 0.01)
+        label.margin = 0.01,
+        family="Tahoma")
     kpPlotRegions(
         karyoplot = kp, 
         data = accessibility, 
@@ -90,24 +120,43 @@ kpAddBaseNumbers(
     karyoplot = kp, 
     tick.dist = 10000000, 
     tick.len = 3, 
-    tick.col = "black" #, cex = 2
+    tick.col = "black",
+    family="Tahoma", 
+    cex = 0.5
 )
 
-# kpAddCytobandLabels(
-#     karyoplot = kp
-# )
+# Background
+kpDataBackground(kp, data.panel = 1, col="#F8F8F8")
+
+
+# Area
+kpAddLabels(kp, labels="Percentage\nof repeated\ncontent along\nthe genome", data.panel=1, r0=0, r1=1, cex = 0.8, family="Tahoma")
+columns <- paste0(classes_order, "_pct_stacked")
+for (i in 1:length(columns)){
+    kpArea(kp, chr=data$chrom, x=data$barycenter, y=data[[columns[i]]], col=colors_order[i], border="NA", r0=0, r1=1)
+}    
 
 # Add the plot's scale
-# kpAxis(
-#     karyoplot = kp, 
-#     data.panel = 1, 
-#     ymin = 0, 
-#     ymax = 100, 
-#     r0 = 0, 
-#     r1 = 1, 
-#     side = "right", 
-#     numticks = 5, 
-#     cex = 0.8
-# )
+kpAxis(
+    karyoplot = kp, 
+    data.panel = 1, 
+    ymin = 0, 
+    ymax = 100, 
+    r0 = 0, 
+    r1 = 1, 
+    side = "right", 
+    numticks = 5, 
+    cex = 0.8
+)
+
+legend(
+  x       = "topright",
+  legend  = classes_order,
+  fill    = colors_order,
+  border  = NA,
+  bty     = "n",
+  title   = "Repeat class",
+  cex     = 0.8
+)
 
 # dev.off()
