@@ -161,7 +161,7 @@ def plot_family_insertions(insertions, per_chromosome=False):
                 mask=(agg_df['rep_class']==cls)&(agg_df['rep_family']==fam)
                 if not mask.any(): continue
                 val=int(agg_df.loc[mask,metric].values[0])
-                ax.bar(i,val,bottom=bottom,width=0.4,color=rgba)
+                ax.bar(i,val,bottom=bottom,width=0.4,color=rgba,edgecolor="white",linewidth=0.3)
                 bottom+=val; total+=val
             ax.text(i,total,str(total),ha='center',va='bottom')
         # legend
@@ -209,6 +209,11 @@ def plot_family_insertions(insertions, per_chromosome=False):
         plt.close(fig)
 
     # Generate plots
+    _plot_stacked(agg_global,'count','Insertion count','Stacked Counts - Whole Genome','stacked_counts_by_class.png')
+    _plot_stacked(agg_global,'length','Base pair span','Stacked Lengths - Whole Genome','stacked_lengths_by_class.png')
+    _plot_contiguous(agg_global,'count','Insertion count','Counts by Family - Whole Genome','contiguous_counts_by_class.png')
+    _plot_contiguous(agg_global,'length','Base pair span','Lengths by Family - Whole Genome','contiguous_lengths_by_class.png')
+
     if per_chromosome:
         for chrom, windows in insertions.items():
             rec=[] 
@@ -219,114 +224,91 @@ def plot_family_insertions(insertions, per_chromosome=False):
             df_chr=pd.DataFrame(rec)
             if df_chr.empty: continue
             agg_chr=df_chr.groupby(['rep_class','rep_family'])[['count','length']].sum().reset_index()
-            _plot_stacked(agg_chr,'count','Insertion count',f'Stacked Counts in chr {chrom}',f'{chrom}_stacked_counts_by_class.png')
-            _plot_stacked(agg_chr,'length','Total bases impacted',f'Stacked Lengths in chr {chrom}',f'{chrom}_stacked_lengths_by_class.png')
-            _plot_contiguous(agg_chr,'count','Insertion count',f'Counts by Family in chr {chrom}',f'{chrom}_contiguous_counts_by_class.png')
-            _plot_contiguous(agg_chr,'length','Total bases impacted',f'Lengths by Family in chr {chrom}',f'{chrom}_contiguous_lengths_by_class.png')
-    else:
-        _plot_stacked(agg_global,'count','Insertion count','Stacked Counts','stacked_counts_by_class.png')
-        _plot_stacked(agg_global,'length','Total bases impacted','Stacked Lengths','stacked_lengths_by_class.png')
-        _plot_contiguous(agg_global,'count','Insertion count','Counts by Family','contiguous_counts_by_class.png')
-        _plot_contiguous(agg_global,'length','Total bases impacted','Lengths by Family','contiguous_lengths_by_class.png')
-
-    return fam_colors
-
-# def export_insertions_for_karyoploter_fam(insertions, fam_colors, output_bed):
-#     """
-#     Flatten per-window, per-class insertion lengths and export to a BED-like file
-#     enriched with colors for karyoploteR.
+            _plot_stacked(agg_chr,'count','Insertion count',f'Stacked Counts in chromosome {chrom}',f'{chrom}_stacked_counts_by_class.png')
+            _plot_stacked(agg_chr,'length','Base pair span',f'Stacked Lengths in chromosome {chrom}',f'{chrom}_stacked_lengths_by_class.png')
+            _plot_contiguous(agg_chr,'count','Insertion count',f'Counts by Family in chromosome {chrom}',f'{chrom}_contiguous_counts_by_class.png')
+            _plot_contiguous(agg_chr,'length','Base pair span',f'Lengths by Family in chromosome {chrom}',f'{chrom}_contiguous_lengths_by_class.png')
     
-#     Assumes `insertions[chrom][window_label][rep_class][rep_family] = {'count', 'length'}` 
-#     where window_label is "chr-start-end".
-    
-#     Args:
-#       insertions: nested dict of insertions by chromosome and window_label.
-#       fam_colors: dict mapping rep_class -> rep_family -> RGBA tuple.
-#       output_bed: path to write the tab-delimited file
-      
-#     Generates a file with columns:
-#       chrom  start   end   rep_class   rep_family   length    color
-#     """
-#     os.makedirs(os.path.dirname(output_bed) or '.', exist_ok=True)
-#     rows = []
-#     for chrom, win_dict in insertions.items():
-#         for win_label, class_dict in win_dict.items():
-#             # win_label expected "chr-start-end"
-#             parts = win_label.split('-')
-#             if len(parts) != 3:
-#                 continue
-#             _, start_str, end_str = parts
-#             start = int(start_str) - 1  # convert to 0-based
-#             end = int(end_str)
-#             for rep_class, families in class_dict.items():
-#                 for rep_family, metrics in families.items():
-#                     length = metrics.get('length', 0)
-#                     rgba = fam_colors.get(rep_class, {}).get(rep_family, (0,0,0,1))
-#                     color = to_hex(rgba, keep_alpha=True)
-#                     rows.append({
-#                         'chrom':      chrom,
-#                         'start':      start,
-#                         'end':        end,
-#                         'rep_class':  rep_class,
-#                         'rep_family': rep_family,
-#                         'length':     length,
-#                         'color':      color
-#                     })
-#     df = pd.DataFrame(rows)
-#     df.to_csv(output_bed, sep='\t', index=False)
+    return class_colors, fam_colors
 
-def export_class_insertions_for_karyoploter(insertions, fam_colors, output_bed):
+def export_window_bed(insertions, windows, output_bed, class_order=None):
     """
-    Flatten per-window, per-class total insertion lengths and export to a BED-like file
-    enriched with class colors (using the first family's color).
-    
+    Export a window-based summary BED file with per-class counts and lengths,
+    optionally percentage of window span, and cumulative stacked counts.
+
     Args:
-      insertions: nested dict of insertions by chromosome and window_label.
-                  insertions[chrom][window_label][rep_class][rep_family] = {'count', 'length'}
-      fam_colors: dict mapping rep_class -> rep_family -> RGBA tuple
-      output_bed: path to write the tab-delimited file
-      
-    Generates a file with columns:
-      chrom  start   end   rep_class   length    color
-    where length is total across all families and color is the hex RGBA of the first family.
+      insertions: dict mapping insertions[chrom][window_label][rep_class][rep_family] = {'count','length'}
+      windows: dict mapping chrom -> list of window_label "chr-start-end"
+      output_bed: path to write the summary
+      class_order: optional list defining the output order of classes
+                   (default = all detected, sorted)
     """
-    # Ensure output directory exists
-    os.makedirs(os.path.dirname(output_bed) or '.', exist_ok=True)
-    
+    # os.makedirs(os.path.dirname(output_bed) or '.', exist_ok=True)
+
+    # Discover all classes present
+    all_classes = sorted({
+        rep_class
+        for chrom_data in insertions.values()
+        for window_dict in chrom_data.values()
+        for rep_class in window_dict.keys()
+    })
+
+    # Determine final class list and order
+    if class_order:
+        # keep only classes that actually exist
+        classes = [c for c in class_order if c in all_classes]
+    else:
+        # default: include all, sorted
+        classes = all_classes
+
+    # Build rows
     rows = []
-    for chrom, win_dict in insertions.items():
-        for win_label, class_dict in win_dict.items():
+    for chrom, win_list in windows.items():
+        for win_label in win_list:
             parts = win_label.split('-')
             if len(parts) != 3:
                 continue
-            _, start_str, end_str = parts
-            start = int(start_str) - 1  # convert to 0-based for BED
-            end = int(end_str)
-            
-            for rep_class, families in class_dict.items():
-                # Sum lengths across families
-                total_length = sum(metrics.get('length', 0) for metrics in families.values())
-                # Choose color of the first family in fam_colors[rep_class]
-                fam_list = list(fam_colors.get(rep_class, {}).keys())
-                if fam_list:
-                    first_family = fam_list[0]
-                    rgba = fam_colors[rep_class][first_family]
-                else:
-                    rgba = (0, 0, 0, 1)
-                color = to_hex(rgba, keep_alpha=True)
-                
-                rows.append({
-                    'chrom':     chrom,
-                    'start':     start,
-                    'end':       end,
-                    'rep_class': rep_class,
-                    'length':    total_length,
-                    'color':     color
-                })
+            _, start_s, end_s = parts
+            start = int(start_s) - 1
+            end = int(end_s)
+            row = {'chrom': chrom, 'start': start, 'end': end}
+            window_len = end - start
+            for cls in classes:
+                fams = insertions.get(chrom, {}).get(win_label, {}).get(cls, {})
+                cnt = sum(m['count'] for m in fams.values())
+                lng = sum(m['length'] for m in fams.values())
+                pct = (lng / window_len * 100) if window_len > 0 else 0
+                row[f'{cls}_count'] = cnt
+                row[f'{cls}_length'] = lng
+                row[f'{cls}_pct'] = round(pct, 3)
+            rows.append(row)
     
+    # Create DataFrame
     df = pd.DataFrame(rows)
-    df.to_csv(output_bed, sep='\t', index=False)
 
+    # Compute stacked counts
+    count_cols = [f'{cls}_count' for cls in classes]
+    stacked = df[count_cols].cumsum(axis=1)
+    stacked.columns = [f'{cls}_count_stacked' for cls in classes]
+    df = pd.concat([df, stacked], axis=1)
+
+    # Compute stacked percentages
+    pct_cols = [f'{cls}_pct' for cls in classes]
+    stacked = df[pct_cols].cumsum(axis=1)
+    stacked.columns = [f'{cls}_pct_stacked' for cls in classes]
+    df = pd.concat([df, stacked], axis=1)
+
+    # Build final column order: chrom, start, end, then per class:
+    cols = ['chrom', 'start', 'end']
+    for cls in classes:
+        cols.append(f'{cls}_count')
+        cols.append(f'{cls}_count_stacked')
+        cols.append(f'{cls}_length')
+        cols.append(f'{cls}_pct')
+        cols.append(f'{cls}_pct_stacked')
+
+    df = df[cols]
+    df.to_csv(output_bed, sep='\t', index=False)
 
 
 
@@ -356,7 +338,7 @@ if __name__ == "__main__":
         window_size = window_size
     )
 
-    # Detect repeats and repeat types
+    # Detect repeat types and actual insertions
 
     repeats, insertions = parse_repeatmasker_output(
         repeatmasker_file = file,
@@ -365,7 +347,10 @@ if __name__ == "__main__":
 
     # Plots (whole genome or list of chromosomes)
 
-    colors = plot_family_insertions(insertions, per_chromosome=False)
+    class_colors, fam_colors = plot_family_insertions(insertions, per_chromosome=False)
     # export_class_insertions_for_karyoploter(insertions, colors, "analyses/insertions_by_window_class.bed")
+
+    export_window_bed(insertions, windows, "analyses/karyoplotr_tables/rep_classes.bed", class_order=None) # ["DNA", "LINE", "LTR", "SINE"]
+
     # cmd = "Rscript scripts/plot_chromosomes.R --genome data/genomes/Ngousso/chromosomes_chr.tsv --chromosome Chr_2R,Chr_2L,Chr_3R,Chr_3L,Chr_X --accessibility data/genomes/Ngousso/accessibility.tsv --out analyses/karyoplotr.png".split(" ")
     # subprocess.run(cmd, check=True)
