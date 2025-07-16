@@ -373,7 +373,7 @@ if __name__ == "__main__":
 
     class_colors, fam_colors = plot_family_insertions(insertions, per_chromosome=False)
     reversed_classes, reversed_colors = export_window_class_bed(insertions, windows, "analyses/karyoplotr_tables/rep_classes.bed", class_colors, class_order=classes_order) 
-    cmd = "Rscript scripts/plot_chromosomes.R --genome data/genomes/Ngousso/chromosomes_chr.tsv --chromosome Chr_2R,Chr_2L,Chr_3R,Chr_3L,Chr_X --accessibility data/genomes/Ngousso/accessibility.tsv --input analyses/karyoplotr_tables/rep_classes.bed --classesorder " + reversed_classes + " --colorsorder " + reversed_colors + " --output analyses/karyoplotr.png"
+    cmd = "Rscript scripts/plot_chromosomes.R --genome data/genomes/Ngousso/chromosomes_chr.tsv --chromosome Chr_2R,Chr_2L,Chr_3R,Chr_3L,Chr_X --accessibility data/genomes/Ngousso/accessibility.tsv --input analyses/karyoplotr_tables/rep_classes.bed --classesorder " + reversed_classes + " --colorsorder " + reversed_colors + " --output analyses/"
     subprocess.run(cmd.split(" "), check=True)
 
 # Usage: python3 scripts/parse_and_plot.py --repeatmasker data/RepeatMasker/ngousso_chr.fasta.out --genome data/genomes/Ngousso/chromosomes_chr.tsv --windowsize 500000 --classesorder Simple_repeat,Low_complexity,DNA,LINE,LTR,SINE,Undetermined
