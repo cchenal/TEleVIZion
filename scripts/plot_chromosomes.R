@@ -81,7 +81,7 @@ png(opt$output, width = 29.7, height = 8, units = "cm", res = 300)
 pp <- getDefaultPlotParams(plot.type=4)
 pp$data1inmargin <- 12 
 pp$leftmargin <- 0.085
-pp$rightmargin <- 0.185
+pp$rightmargin <- 0.195
 pp$ideogramlateralmargin <- 0.01
 pp$data2inmargin <- 10
 
@@ -126,7 +126,7 @@ kpAddBaseNumbers(
 )
 
 # Background
-kpDataBackground(kp, data.panel = 1, col="#F8F8F8")
+kpDataBackground(kp, data.panel = 1, col="grey97")
 
 
 # Area
@@ -140,23 +140,48 @@ for (i in 1:length(columns)){
 kpAxis(
     karyoplot = kp, 
     data.panel = 1, 
-    ymin = 0, 
-    ymax = 100, 
+    # ymin = 0, 
+    # ymax = 100, 
     r0 = 0, 
     r1 = 1, 
     side = "right", 
-    numticks = 5, 
+    numticks = 5,
+    labels = c("0%", "25%", "50%", "75%", "100%"), 
     cex = 0.8
 )
 
+# Legend
+twidth  <- max(strwidth(classes_order, units="user"))
+
 legend(
-  x       = "topright",
+  x       = 0.87,
+  y       = 1.25,
   legend  = classes_order,
   fill    = colors_order,
-  border  = NA,
-  bty     = "n",
+  border  = "grey5",
+  bty     = "o",
+  box.lwd = 0.3,
   title   = "Repeat class",
-  cex     = 0.8
+  cex     = 0.8,
+  text.width = twidth,
+  xpd = TRUE
 )
+
+if (is.character(opt$accessibility)){
+    legend(
+    x       = 0.87,
+    y       = 0,
+    legend  = c("Low", "High"),
+    fill    = c("grey5", "grey95"),
+    border  = "grey5", #NA
+    bty     = "o",
+    box.lwd = 0.3,
+    title   = "Accessibility",
+    cex     = 0.8,
+    text.width = twidth,
+    xpd = TRUE
+    )
+}
+
 
 # dev.off()
