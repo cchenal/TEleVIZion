@@ -1,4 +1,5 @@
 import os
+import sys
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
@@ -106,6 +107,80 @@ def parse_repeatmasker_output(repeatmasker_file, windows_dict):
                     insertions[chromosome][window][tmp_insertions[tmp]["rep_class"]][tmp_insertions[tmp]["rep_family"]]["count"] += 1 
                     insertions[chromosome][window][tmp_insertions[tmp]["rep_class"]][tmp_insertions[tmp]["rep_family"]]["length"] += len_bp_to_consider
     return(repeats, insertions)                    
+
+def parse_edta_output(edta_file, windows_dict):
+    ## Retrieve all types of repeats in EDTA output file
+    repeats = {}
+    for line in open(edta_file).readlines():
+        if line[0] != "#":
+            fields = line[:-1].split()
+            classification = fields[8].split("classification=")[1].split(";")[0].split("/")
+            rep_class = classification[0]
+            if len(classification) == 1:
+                rep_family = "NA"                    
+            else:
+                if classification[1] == "":
+                    rep_family = "NA"
+                else:
+                    rep_family = classification[1]
+            # Update repeats dict
+            if rep_class not in repeats:
+                repeats[rep_class] = {}
+            if rep_family not in repeats[rep_class]:
+                repeats[rep_class][rep_family] = 0
+            repeats[rep_class][rep_family] += 1
+   
+    ## Retrieve all insertions
+    # Initialize insertions dict, following the chromosomes and affiliated windows
+    insertions = {}
+    for chrom in windows_dict:
+        insertions[chrom] = {}
+        for window in windows_dict[chrom]:
+            insertions[chrom][window] = {}
+            for rep_class in repeats:
+                insertions[chrom][window][rep_class] = {}
+                for rep_family in repeats[rep_class]:
+                    insertions[chrom][window][rep_class][rep_family] = {"count":0, "length":0}
+    # Fill insertions dict chromosome per chromosome to limit memory usage
+    for chromosome in insertions:
+        # print(chromosome)
+        tmp_insertions, counter = {}, 0
+        for line in open(edta_file).readlines():
+            if line[0] != "#":
+                fields = line[:-1].split("\t")
+                chrom = fields[0]
+                if chrom == chromosome:
+                    # print(fields)
+                    start = min(int(fields[3]), int(fields[4]))
+                    end = max(int(fields[3]), int(fields[4]))
+                    classification = fields[8].split("classification=")[1].split(";")[0].split("/")
+                    rep_class = classification[0]
+                    if len(classification) == 1:
+                        rep_family = "NA"                    
+                    else:
+                        if classification[1] == "":
+                            rep_family = "NA"
+                        else:
+                            rep_family = classification[1]
+                    tmp_insertions[str(counter)] = {
+                        "chrom":chrom, 
+                        "start":int(start), 
+                        "end":int(end), 
+                        "rep_class":rep_class, 
+                        "rep_family":rep_family}
+                    # print(tmp_insertions[str(counter)])
+                    counter += 1
+        # Update insertions dict
+        for window in insertions[chromosome]:
+            coordinates = window.split("-")
+            for tmp in tmp_insertions:
+                if (tmp_insertions[tmp]["start"] < int(coordinates[2])) and (tmp_insertions[tmp]["end"] > int(coordinates[1])):
+                    min_bp_to_consider = max(tmp_insertions[tmp]["start"], int(coordinates[1]))
+                    max_bp_to_consider = min(tmp_insertions[tmp]["end"], int(coordinates[2]))
+                    len_bp_to_consider = max_bp_to_consider - min_bp_to_consider
+                    insertions[chromosome][window][tmp_insertions[tmp]["rep_class"]][tmp_insertions[tmp]["rep_family"]]["count"] += 1 
+                    insertions[chromosome][window][tmp_insertions[tmp]["rep_class"]][tmp_insertions[tmp]["rep_family"]]["length"] += len_bp_to_consider
+    return(repeats, insertions)
 
 def plot_family_insertions(insertions, per_chromosome=False):
     """
@@ -339,14 +414,21 @@ if __name__ == "__main__":
     )
 
     parser.add_argument("--genome", required=True, type=str)
-    parser.add_argument("--repeatmasker", required=True, type=str) # To be changed when several tools available
+    parser.add_argument("--repeatmasker", required=False, type=str, default=None) 
+    parser.add_argument("--edta", required=False, type=str, default=None) 
     parser.add_argument("--windowsize", required=False, type=int, default=10000)
     parser.add_argument("--classesorder", required=False, type=str, default=None)
 
     args = parser.parse_args()
 
     genome = args.genome
-    file = args.repeatmasker # to be modified when several tools will be available
+    if args.repeatmasker != None:
+        file = args.repeatmasker 
+    elif args.edta != None:
+        file = args.edta 
+    else: 
+        print("You shhould provide an inut file using --repeatmasker or --edta")
+        sys.exit()
     window_size = args.windowsize
     if args.classesorder != None:
         classes_order = args.classesorder.split(",")
@@ -364,16 +446,23 @@ if __name__ == "__main__":
 
     # Detect repeat types and actual insertions
 
-    repeats, insertions = parse_repeatmasker_output(
-        repeatmasker_file = file,
-        windows_dict = windows
-    )
+    if args.repeatmasker != None:
+        repeats, insertions = parse_repeatmasker_output(
+            repeatmasker_file = file,
+            windows_dict = windows
+        )
+    elif args.edta != None:
+        repeats, insertions = parse_edta_output(
+            edta_file = file,
+            windows_dict = windows
+        )
+
 
     # Plots (whole genome or list of chromosomes)
 
     class_colors, fam_colors = plot_family_insertions(insertions, per_chromosome=False)
-    reversed_classes, reversed_colors = export_window_class_bed(insertions, windows, "analyses/karyoplotr_tables/rep_classes.bed", class_colors, class_order=classes_order) 
-    cmd = "Rscript scripts/plot_chromosomes.R --genome data/genomes/Ngousso/chromosomes_chr.tsv --chromosome Chr_2R,Chr_2L,Chr_3R,Chr_3L,Chr_X --accessibility data/genomes/Ngousso/accessibility.tsv --input analyses/karyoplotr_tables/rep_classes.bed --classesorder " + reversed_classes + " --colorsorder " + reversed_colors + " --output analyses/"
-    subprocess.run(cmd.split(" "), check=True)
+    # reversed_classes, reversed_colors = export_window_class_bed(insertions, windows, "analyses/karyoplotr_tables/rep_classes.bed", class_colors, class_order=classes_order) 
+    # cmd = "Rscript scripts/plot_chromosomes.R --genome data/genomes/Ngousso/chromosomes_chr.tsv --chromosome Chr_2R,Chr_2L,Chr_3R,Chr_3L,Chr_X --accessibility data/genomes/Ngousso/accessibility.tsv --input analyses/karyoplotr_tables/rep_classes.bed --classesorder " + reversed_classes + " --colorsorder " + reversed_colors + " --output analyses/"
+    # subprocess.run(cmd.split(" "), check=True)
 
 # Usage: python3 scripts/parse_and_plot.py --repeatmasker data/RepeatMasker/ngousso_chr.fasta.out --genome data/genomes/Ngousso/chromosomes_chr.tsv --windowsize 500000 --classesorder Simple_repeat,Low_complexity,DNA,LINE,LTR,SINE,Undetermined
