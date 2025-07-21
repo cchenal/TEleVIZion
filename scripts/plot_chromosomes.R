@@ -11,6 +11,7 @@ cat("\n### PARSING ARGUMENTS ###\n\n")
 # ); 
 
 option_list = list(
+  make_option(c("-n", "--name"), type="character", default=NULL, help="prefix to use for outputs", metavar="character"), 
   make_option(c("-g", "--genome"), type="character", default=NULL, help="genome file name, tabulated: [chr, start, end, name, gieStain]", metavar="character"), 
   make_option(c("-c", "--chromosomes"), type="character", default=NULL, help="chromosome order, use comma", metavar="character"), 
   make_option(c("-a", "--accessibility"), type="character", default="not_displayed", help="genome accessibility file name, tabulated: [chr, start, end, name, itemRgb]", metavar="character"), 
@@ -57,7 +58,7 @@ cat("\n### CODE ###\n\n")
 ### Get the data 
 
 data <- read.csv(opt$input, sep="\t")
-
+name <- opt$name
 
 ### Retrieve chromosomes informations
 
@@ -69,24 +70,21 @@ if (is.character(opt$chromosomes)){
     chromosome_order <- genome@seqinfo@seqnames
 }
 
-# if (is.character(opt$accessibility)){
-#     accessibility <- toGRanges(opt$accessibility)
-# }
-
-
 if (opt$accessibility != "not_displayed"){
   accessibility <- toGRanges(opt$accessibility)
 }
 
 ### Percentage of repeats along the genome
 
-file <- paste0(opt$output, "karyoplot_stacked_percentage_by_class.png")
+file <- paste0(opt$output, "_karyoplot_stacked_percentage_by_class.png")
 png(file, width = 29.7, height = 8, units = "cm", res = 300)
 
 # Graphical parameters 
 pp <- getDefaultPlotParams(plot.type=4)
 pp$data1inmargin <- 12 
-pp$leftmargin <- 0.085
+# pp$leftmargin <- 0.085
+pp$topmargin <- 70
+pp$leftmargin <- 0.02
 pp$rightmargin <- 0.195
 pp$ideogramlateralmargin <- 0.01
 pp$data2inmargin <- 10
@@ -132,7 +130,7 @@ kpDataBackground(kp, data.panel = 1, col="grey96")
 
 
 # Area
-kpAddLabels(kp, labels="Percentage\nof repeated\ncontent along\nthe genome", data.panel=1, r0=0, r1=1, cex = 0.8, family="Tahoma")
+# kpAddLabels(kp, labels="Percentage\nof repeated\ncontent along\nthe genome", data.panel=1, r0=0, r1=1, cex = 0.8, family="Tahoma")
 columns <- paste0(classes_order, "_pct_stacked")
 for (i in 1:length(columns)){
     kpArea(kp, chr=data$chrom, x=data$barycenter, y=data[[columns[i]]], col=colors_order[i], border="NA", r0=0, r1=1)
@@ -186,6 +184,9 @@ if (opt$accessibility != "not_displayed"){
     )
 }
 
+# Title
+title(paste0("Percentage of repeated content along chromosomes - ", name), cex = 0.4)
+
 dev.off()
 
 
@@ -193,13 +194,15 @@ dev.off()
 
 ### Number of insertions along the genome 
 
-file <- paste0(opt$output, "karyoplot_stacked_counts_by_class.png")
+file <- paste0(opt$output, "_karyoplot_stacked_counts_by_class.png")
 png(file, width = 29.7, height = 8, units = "cm", res = 300)
 
 # Graphical parameters 
 pp <- getDefaultPlotParams(plot.type=4)
 pp$data1inmargin <- 12 
-pp$leftmargin <- 0.085
+# pp$leftmargin <- 0.085
+pp$topmargin <- 70
+pp$leftmargin <- 0.02
 pp$rightmargin <- 0.195
 pp$ideogramlateralmargin <- 0.01
 pp$data2inmargin <- 10
@@ -245,7 +248,7 @@ kpDataBackground(kp, data.panel = 1, col="grey96")
 
 
 # Area
-kpAddLabels(kp, labels="Number of\ninsertions\nalong the\ngenome", data.panel=1, r0=0, r1=1, cex = 0.8, family="Tahoma")
+# kpAddLabels(kp, labels="Number of\ninsertions\nalong the\ngenome", data.panel=1, r0=0, r1=1, cex = 0.8, family="Tahoma")
 columns <- paste0(classes_order, "_count_stacked")
 overall_max <- max(data[, columns])
 for (i in 1:length(columns)){
@@ -297,3 +300,6 @@ if (opt$accessibility != "not_displayed"){
     xpd = TRUE
     )
 }
+
+# Title
+title(paste0("Number of insertions along chromosomes - ", name), cex = 0.4)

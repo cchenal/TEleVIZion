@@ -9,6 +9,8 @@ import pandas as pd
 import subprocess
 
 def define_windows(genome_file, window_size, chrom_to_plot):
+    print("# Running define_windows function")
+
     windows = {}
     for line in open(genome_file).readlines():
         if not line.startswith("chr\tstart"):
@@ -29,6 +31,8 @@ def define_windows(genome_file, window_size, chrom_to_plot):
     return(windows, chroms)
 
 def parse_repeatmasker_output(repeatmasker_file, windows_dict):
+    print("# Running parse_repeatmasker_output function")
+    
     ## Retrieve all types of repeats in repeatmasker output file
     repeats = {}
     for line in open(repeatmasker_file).readlines():
@@ -116,6 +120,8 @@ def parse_repeatmasker_output(repeatmasker_file, windows_dict):
     return(repeats, insertions)                    
 
 def parse_edta_output(edta_file, windows_dict):
+    print("# Running parse_edta_output function")
+    
     ## Retrieve all types of repeats in EDTA output file
     repeats = {}
     for line in open(edta_file).readlines():
@@ -189,14 +195,12 @@ def parse_edta_output(edta_file, windows_dict):
                     insertions[chromosome][window][tmp_insertions[tmp]["rep_class"]][tmp_insertions[tmp]["rep_family"]]["length"] += len_bp_to_consider
     return(repeats, insertions)
 
-def plot_family_insertions(insertions, per_chromosome=False):
+def plot_family_insertions(name, insertions, per_chromosome=False):
     """
-    Creates both stacked and contiguous non-stacked bar charts of TE insertions by class/family.
-    - per_chromosome=False: global genome-wide charts
-    - per_chromosome=True: per-chromosome charts
-    Saves PNGs to analyses/ and returns fam_colors mapping.
     """
-    # os.makedirs('analyses', exist_ok=True)
+    print("# Running plot_family_insertions function")
+
+    os.makedirs('analyses', exist_ok=True)
 
     # Use Tahoma for all fonts
     plt.rcParams['font.family'] = 'Tahoma'
@@ -270,7 +274,7 @@ def plot_family_insertions(insertions, per_chromosome=False):
         ax.set_title(title,weight='bold',pad=20)
         ax.legend(handles=handles,title='Families',loc='upper left',bbox_to_anchor=(1.05,1),ncol=1,fontsize='small')
         plt.tight_layout()
-        fig.savefig(f'analyses/{fname}',bbox_inches='tight')
+        fig.savefig(f'{fname}',bbox_inches='tight')
         plt.close(fig)
 
     def _plot_contiguous(agg_df, metric, ylabel, title, fname):
@@ -300,16 +304,16 @@ def plot_family_insertions(insertions, per_chromosome=False):
         legend_handles = [mpatches.Patch(color=class_colors_hex[cls], label=cls)
                           for cls in class_order]
         ax.legend(handles=legend_handles, title='Repeat class',
-                loc = "lower right", ncol=1, fontsize='small') # loc='upper left', bbox_to_anchor=(1.05,1),
+                loc = "lower right", ncol=1, fontsize='small') # loc='upper left', bbox_to_anchor=(1.05,1)
         plt.tight_layout()
-        fig.savefig(f'analyses/{fname}',bbox_inches='tight')
+        fig.savefig(f'{fname}',bbox_inches='tight')
         plt.close(fig)
 
-    # Generate plots
-    _plot_stacked(agg_global,'count','Insertion count','Stacked Counts - Whole Genome','stacked_counts_by_class.png')
-    _plot_stacked(agg_global,'length','Base pair span','Stacked Lengths - Whole Genome','stacked_lengths_by_class.png')
-    _plot_contiguous(agg_global,'count','Insertion count','Counts by Family - Whole Genome','contiguous_counts_by_class.png')
-    _plot_contiguous(agg_global,'length','Base pair span','Lengths by Family - Whole Genome','contiguous_lengths_by_class.png')
+    # Generate plots if not already existing 
+    _plot_stacked(agg_global,'count','Insertion count','Stacked Counts - Whole Genome', f'analyses/{name}_whole_genome_stacked_counts_by_class.png')
+    _plot_stacked(agg_global,'length','Base pair span','Stacked Lengths - Whole Genome', f'analyses/{name}_whole_genome_stacked_lengths_by_class.png')
+    _plot_contiguous(agg_global,'count','Insertion count','Counts by Family - Whole Genome', f'analyses/{name}_whole_genome_contiguous_counts_by_class.png')
+    _plot_contiguous(agg_global,'length','Base pair span','Lengths by Family - Whole Genome', f'analyses/{name}_whole_genome_contiguous_lengths_by_class.png')
 
     if per_chromosome:
         for chrom, windows in insertions.items():
@@ -321,26 +325,25 @@ def plot_family_insertions(insertions, per_chromosome=False):
             df_chr=pd.DataFrame(rec)
             if df_chr.empty: continue
             agg_chr=df_chr.groupby(['rep_class','rep_family'])[['count','length']].sum().reset_index()
-            _plot_stacked(agg_chr,'count','Insertion count',f'Stacked Counts in chromosome {chrom}',f'{chrom}_stacked_counts_by_class.png')
-            _plot_stacked(agg_chr,'length','Base pair span',f'Stacked Lengths in chromosome {chrom}',f'{chrom}_stacked_lengths_by_class.png')
-            _plot_contiguous(agg_chr,'count','Insertion count',f'Counts by Family in chromosome {chrom}',f'{chrom}_contiguous_counts_by_class.png')
-            _plot_contiguous(agg_chr,'length','Base pair span',f'Lengths by Family in chromosome {chrom}',f'{chrom}_contiguous_lengths_by_class.png')
+            _plot_stacked(agg_chr,'count','Insertion count',f'Stacked Counts in chromosome {chrom}',f'analyses/{name}_{chrom}_stacked_counts_by_class.png')
+            _plot_stacked(agg_chr,'length','Base pair span',f'Stacked Lengths in chromosome {chrom}',f'analyses/{name}_{chrom}_stacked_lengths_by_class.png')
+            _plot_contiguous(agg_chr,'count','Insertion count',f'Counts by Family in chromosome {chrom}',f'analyses/{name}_{chrom}_contiguous_counts_by_class.png')
+            _plot_contiguous(agg_chr,'length','Base pair span',f'Lengths by Family in chromosome {chrom}',f'analyses/{name}_{chrom}_contiguous_lengths_by_class.png')
     
     return(class_colors_hex, fam_colors)
 
-def export_window_class_bed(insertions, windows, output_bed, class_colors, class_order=None):
+def export_window_class_bed(name, window_size, insertions, windows, class_colors, class_order=None):
     """
-    Export a window-based summary BED file with per-class counts and lengths,
-    optionally percentage of window span, and cumulative stacked counts.
+    """
+    print("# Running export_window_class_bed function")
 
-    Args:
-      insertions: dict mapping insertions[chrom][window_label][rep_class][rep_family] = {'count','length'}
-      windows: dict mapping chrom -> list of window_label "chr-start-end"
-      output_bed: path to write the summary
-      class_order: optional list defining the output order of classes
-                   (default = all detected, sorted)
-    """
-    # os.makedirs(os.path.dirname(output_bed) or '.', exist_ok=True)
+    os.makedirs('analyses/karyoplot_tables', exist_ok = True)
+
+    output_bed = f'analyses/karyoplot_tables/{name}_{window_size}_repeat_classes.bed'
+
+    # TO DO 
+    # if (os.path.isfile(output_bed)) and (os.stat(output_bed).st_size != 0):
+    #     print(f'{output_bed} already exists and isn’t empty. To force recalculation, please delete it first.')
 
     # Discover all classes present
     all_classes = sorted({
@@ -415,6 +418,15 @@ def export_window_class_bed(insertions, windows, output_bed, class_colors, class
     reversed_colors = ",".join(list(reversed(tmp_colors)))
     return(reversed_classes, reversed_colors)
 
+def plot_karyoplots(name, window_size, genome_file, chromosomes, accessibility, classes, colors):
+    print("# Running plot_karyoplots function")
+
+    # Percentage and counts - Horizontal version
+    cmd = f'Rscript scripts/plot_chromosomes.R --name {name} --genome {genome_file} --chromosome {chromosomes} --accessibility {accessibility} --input analyses/karyoplot_tables/{name}_{window_size}_repeat_classes.bed --classesorder {classes} --colorsorder {colors} --output analyses/{name}_{window_size}'
+    print(cmd)
+    subprocess.run(cmd.split(" "), check=True)
+    # Percentage and counts - Vertical version
+    # cmd = "Rscript scripts/plot_chromosomes_vertical.R --genome " + genome + " --chromosome " + chromosomes_to_plot + " --accessibility " + accessibility + " --input analyses/karyoplotr_tables/rep_classes.bed --classesorder " + reversed_classes + " --colorsorder " + reversed_colors + " --output analyses/"
 
 
 if __name__ == "__main__":
@@ -425,6 +437,7 @@ if __name__ == "__main__":
         description="Funny description to come"
     )
 
+    parser.add_argument("--name", required=False, type=str, default="output")
     parser.add_argument("--genome", required=True, type=str)
     parser.add_argument("--repeatmasker", required=False, type=str, default=None) 
     parser.add_argument("--edta", required=False, type=str, default=None) 
@@ -434,6 +447,8 @@ if __name__ == "__main__":
     parser.add_argument("--accessibility", required=False, type=str, default=None)
 
     args = parser.parse_args()
+
+    name = args.name
 
     genome = args.genome
 
@@ -486,13 +501,32 @@ if __name__ == "__main__":
             windows_dict = windows
         )
 
-
     # Plots (whole genome or list of chromosomes)
 
-    class_colors, fam_colors = plot_family_insertions(insertions, per_chromosome=False)
-    reversed_classes, reversed_colors = export_window_class_bed(insertions, windows, "analyses/karyoplotr_tables/rep_classes.bed", class_colors, class_order=classes_order) 
+    class_colors, fam_colors = plot_family_insertions(
+        name = name,
+        insertions = insertions, 
+        per_chromosome = False
+        )
     
-    cmd = "Rscript scripts/plot_chromosomes.R --genome " + genome + " --chromosome " + chromosomes_to_plot + " --accessibility " + accessibility + " --input analyses/karyoplotr_tables/rep_classes.bed --classesorder " + reversed_classes + " --colorsorder " + reversed_colors + " --output analyses/"
-    subprocess.run(cmd.split(" "), check=True)
+    reversed_classes, reversed_colors = export_window_class_bed(
+        name = name,
+        window_size = window_size,
+        windows = windows,
+        insertions = insertions, 
+        class_colors = class_colors, 
+        class_order = classes_order
+        ) 
+    
+    plot_karyoplots(
+        name = name, 
+        window_size = window_size,
+        genome_file = genome, 
+        chromosomes = chromosomes_to_plot, 
+        accessibility = accessibility, 
+        classes = reversed_classes, 
+        colors = reversed_colors
+    )
+
 
 # Usage: python3 scripts/parse_and_plot.py --repeatmasker data/RepeatMasker/ngousso_chr.fasta.out --genome data/genomes/Ngousso/chromosomes_chr.tsv --windowsize 500000 --classesorder Simple_repeat,Low_complexity,DNA,LINE,LTR,SINE,Undetermined
