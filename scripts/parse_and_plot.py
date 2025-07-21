@@ -8,7 +8,7 @@ from matplotlib.colors import to_hex
 import pandas as pd
 import subprocess
 
-def define_windows(genome_file, window_size):
+def define_windows(genome_file, window_size, chrom_to_plot):
     windows = {}
     for line in open(genome_file).readlines():
         if not line.startswith("chr\tstart"):
@@ -19,7 +19,14 @@ def define_windows(genome_file, window_size):
                 end = min(start + window_size, length)
                 window = f"{chrom}-{start + 1}-{end}"  # 1-based indexing
                 windows[chrom].append(window)
-    return(windows)
+    if chrom_to_plot == "all": 
+        tmp = []
+        for chrom in windows:
+            tmp.append(chrom)
+        chroms = ",".join(tmp)
+    else:
+        chroms = chrom_to_plot
+    return(windows, chroms)
 
 def parse_repeatmasker_output(repeatmasker_file, windows_dict):
     ## Retrieve all types of repeats in repeatmasker output file
@@ -289,6 +296,11 @@ def plot_family_insertions(insertions, per_chromosome=False):
         ax.set_xlabel(ylabel,weight='bold',labelpad=12)
         ax.set_ylabel('Repeat family',weight='bold',labelpad=12)
         ax.set_title(title,weight='bold',pad=20)
+        # legend of classes
+        legend_handles = [mpatches.Patch(color=class_colors_hex[cls], label=cls)
+                          for cls in class_order]
+        ax.legend(handles=legend_handles, title='Repeat class',
+                loc = "lower right", ncol=1, fontsize='small') # loc='upper left', bbox_to_anchor=(1.05,1),
         plt.tight_layout()
         fig.savefig(f'analyses/{fname}',bbox_inches='tight')
         plt.close(fig)
@@ -417,31 +429,48 @@ if __name__ == "__main__":
     parser.add_argument("--repeatmasker", required=False, type=str, default=None) 
     parser.add_argument("--edta", required=False, type=str, default=None) 
     parser.add_argument("--windowsize", required=False, type=int, default=10000)
+    parser.add_argument("--chromtoplot", required=False, type=str, default="all")
     parser.add_argument("--classesorder", required=False, type=str, default=None)
+    parser.add_argument("--accessibility", required=False, type=str, default=None)
 
     args = parser.parse_args()
 
     genome = args.genome
+
     if args.repeatmasker != None:
         file = args.repeatmasker 
     elif args.edta != None:
         file = args.edta 
     else: 
-        print("You shhould provide an inut file using --repeatmasker or --edta")
+        print("You should provide an inut file using --repeatmasker or --edta")
         sys.exit()
+
     window_size = args.windowsize
+
+    if args.chromtoplot != "all":
+        chrom_to_plot = args.chromtoplot
+    else:
+        chrom_to_plot = "all"
+
     if args.classesorder != None:
         classes_order = args.classesorder.split(",")
     else:
         classes_order = None
 
+    if args.accessibility != None:
+        accessibility = args.accessibility 
+    else:
+        accessibility = "not_displayed"
+
+
     ### CODE
 
     # Define windows 
 
-    windows = define_windows(
+    windows, chromosomes_to_plot = define_windows(
         genome_file = genome, 
-        window_size = window_size
+        window_size = window_size,
+        chrom_to_plot = chrom_to_plot
     )
 
     # Detect repeat types and actual insertions
@@ -461,8 +490,9 @@ if __name__ == "__main__":
     # Plots (whole genome or list of chromosomes)
 
     class_colors, fam_colors = plot_family_insertions(insertions, per_chromosome=False)
-    # reversed_classes, reversed_colors = export_window_class_bed(insertions, windows, "analyses/karyoplotr_tables/rep_classes.bed", class_colors, class_order=classes_order) 
-    # cmd = "Rscript scripts/plot_chromosomes.R --genome data/genomes/Ngousso/chromosomes_chr.tsv --chromosome Chr_2R,Chr_2L,Chr_3R,Chr_3L,Chr_X --accessibility data/genomes/Ngousso/accessibility.tsv --input analyses/karyoplotr_tables/rep_classes.bed --classesorder " + reversed_classes + " --colorsorder " + reversed_colors + " --output analyses/"
-    # subprocess.run(cmd.split(" "), check=True)
+    reversed_classes, reversed_colors = export_window_class_bed(insertions, windows, "analyses/karyoplotr_tables/rep_classes.bed", class_colors, class_order=classes_order) 
+    
+    cmd = "Rscript scripts/plot_chromosomes.R --genome " + genome + " --chromosome " + chromosomes_to_plot + " --accessibility " + accessibility + " --input analyses/karyoplotr_tables/rep_classes.bed --classesorder " + reversed_classes + " --colorsorder " + reversed_colors + " --output analyses/"
+    subprocess.run(cmd.split(" "), check=True)
 
 # Usage: python3 scripts/parse_and_plot.py --repeatmasker data/RepeatMasker/ngousso_chr.fasta.out --genome data/genomes/Ngousso/chromosomes_chr.tsv --windowsize 500000 --classesorder Simple_repeat,Low_complexity,DNA,LINE,LTR,SINE,Undetermined

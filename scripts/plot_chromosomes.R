@@ -13,7 +13,7 @@ cat("\n### PARSING ARGUMENTS ###\n\n")
 option_list = list(
   make_option(c("-g", "--genome"), type="character", default=NULL, help="genome file name, tabulated: [chr, start, end, name, gieStain]", metavar="character"), 
   make_option(c("-c", "--chromosomes"), type="character", default=NULL, help="chromosome order, use comma", metavar="character"), 
-  make_option(c("-a", "--accessibility"), type="character", default=NULL, help="genome accessibility file name, tabulated: [chr, start, end, name, itemRgb]", metavar="character"), 
+  make_option(c("-a", "--accessibility"), type="character", default="not_displayed", help="genome accessibility file name, tabulated: [chr, start, end, name, itemRgb]", metavar="character"), 
   make_option(c("-i", "--input"), type="character", default=NULL, help="input file name, tabulated: [chr, start, end, <areas>]", metavar="character"), 
   make_option(c("-k", "--classesorder"), type="character", default=NULL, help="classes order, should be reversed for display purposes, use comma", metavar="character"), 
   make_option(c("-l", "--colorsorder"), type="character", default=NULL, help="colors order, should be reversed for display purposes, use comma", metavar="character"), 
@@ -69,8 +69,13 @@ if (is.character(opt$chromosomes)){
     chromosome_order <- genome@seqinfo@seqnames
 }
 
-if (is.character(opt$accessibility)){
-    accessibility <- toGRanges(opt$accessibility)
+# if (is.character(opt$accessibility)){
+#     accessibility <- toGRanges(opt$accessibility)
+# }
+
+
+if (opt$accessibility != "not_displayed"){
+  accessibility <- toGRanges(opt$accessibility)
 }
 
 ### Percentage of repeats along the genome
@@ -97,7 +102,7 @@ kp <- plotKaryotype(
 )
 
 # Painting loci according to their accessibility
-if (is.character(opt$accessibility)){
+if (opt$accessibility != "not_displayed"){
     kpAddLabels(
         karyoplot = kp, 
         labels = "Accessibility", 
@@ -164,7 +169,8 @@ legend(
   xpd = TRUE
 )
 
-if (is.character(opt$accessibility)){
+# if (is.character(opt$accessibility)){
+if (opt$accessibility != "not_displayed"){
     legend(
     x       = 0.87,
     y       = 0,
@@ -209,7 +215,7 @@ kp <- plotKaryotype(
 )
 
 # Painting loci according to their accessibility
-if (is.character(opt$accessibility)){
+if (opt$accessibility != "not_displayed"){
     kpAddLabels(
         karyoplot = kp, 
         labels = "Accessibility", 
@@ -276,7 +282,7 @@ legend(
   xpd = TRUE
 )
 
-if (is.character(opt$accessibility)){
+if (opt$accessibility != "not_displayed"){
     legend(
     x       = 0.87,
     y       = 0,
