@@ -185,7 +185,7 @@ if (opt$accessibility != "not_displayed"){
 }
 
 # Title
-title(paste0("Percentage of repeated content along chromosomes - ", name), cex = 0.4)
+title(paste0("Percentage of repeated content along chromosomes - ", name), cex = 0.2)
 
 dev.off()
 
@@ -302,4 +302,4 @@ if (opt$accessibility != "not_displayed"){
 }
 
 # Title
-title(paste0("Number of insertions along chromosomes - ", name), cex = 0.4)
+title(paste0("Number of insertions along chromosomes - ", name), cex = 0.2)

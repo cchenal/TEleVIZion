@@ -7,9 +7,10 @@ import matplotlib.patches as mpatches
 from matplotlib.colors import to_hex
 import pandas as pd
 import subprocess
+from intervaltree import IntervalTree
 
 def define_windows(genome_file, window_size, chrom_to_plot):
-    print("# Running define_windows function")
+    print("\n\n# Running define_windows function\n")
 
     windows = {}
     for line in open(genome_file).readlines():
@@ -31,7 +32,7 @@ def define_windows(genome_file, window_size, chrom_to_plot):
     return(windows, chroms)
 
 def parse_repeatmasker_output(repeatmasker_file, windows_dict):
-    print("# Running parse_repeatmasker_output function")
+    print("# Running parse_repeatmasker_output function\n")
     
     ## Retrieve all types of repeats in repeatmasker output file
     repeats = {}
@@ -120,7 +121,7 @@ def parse_repeatmasker_output(repeatmasker_file, windows_dict):
     return(repeats, insertions)                    
 
 def parse_edta_output(edta_file, windows_dict):
-    print("# Running parse_edta_output function")
+    print("# Running parse_edta_output function\n")
     
     ## Retrieve all types of repeats in EDTA output file
     repeats = {}
@@ -154,10 +155,11 @@ def parse_edta_output(edta_file, windows_dict):
                 insertions[chrom][window][rep_class] = {}
                 for rep_family in repeats[rep_class]:
                     insertions[chrom][window][rep_class][rep_family] = {"count":0, "length":0}
+            insertions[chrom][window]["nested_repeats"] = {"NA": {"count":0, "length":0}} # Can be refined later (DNA_LTR, DNA_DNA, ...).
     # Fill insertions dict chromosome per chromosome to limit memory usage
     for chromosome in insertions:
         # print(chromosome)
-        tmp_insertions, counter = {}, 0
+        chrom_insertions, counter = {}, 0
         for line in open(edta_file).readlines():
             if line[0] != "#":
                 fields = line[:-1].split("\t")
@@ -175,30 +177,101 @@ def parse_edta_output(edta_file, windows_dict):
                             rep_family = "NA"
                         else:
                             rep_family = classification[1]
-                    tmp_insertions[str(counter)] = {
+                    chrom_insertions[str(counter)] = {
                         "chrom":chrom, 
                         "start":int(start), 
                         "end":int(end), 
                         "rep_class":rep_class, 
-                        "rep_family":rep_family}
-                    # print(tmp_insertions[str(counter)])
+                        "rep_family":rep_family
+                        }
                     counter += 1
-        # Update insertions dict
         for window in insertions[chromosome]:
             coordinates = window.split("-")
-            for tmp in tmp_insertions:
-                if (tmp_insertions[tmp]["start"] < int(coordinates[2])) and (tmp_insertions[tmp]["end"] > int(coordinates[1])):
-                    min_bp_to_consider = max(tmp_insertions[tmp]["start"], int(coordinates[1]))
-                    max_bp_to_consider = min(tmp_insertions[tmp]["end"], int(coordinates[2]))
-                    len_bp_to_consider = max_bp_to_consider - min_bp_to_consider
-                    insertions[chromosome][window][tmp_insertions[tmp]["rep_class"]][tmp_insertions[tmp]["rep_family"]]["count"] += 1 
-                    insertions[chromosome][window][tmp_insertions[tmp]["rep_class"]][tmp_insertions[tmp]["rep_family"]]["length"] += len_bp_to_consider
+            window_insertions = {}
+            for tmp in chrom_insertions:
+                if (chrom_insertions[tmp]["start"] < int(coordinates[2])) and (chrom_insertions[tmp]["end"] > int(coordinates[1])):
+                    min_bp_to_consider = max(chrom_insertions[tmp]["start"], int(coordinates[1]))
+                    max_bp_to_consider = min(chrom_insertions[tmp]["end"], int(coordinates[2]))
+                    window_insertions[tmp] = {
+                        "chrom":chrom_insertions[tmp]["chrom"], 
+                        "start":min_bp_to_consider, 
+                        "end":max_bp_to_consider, 
+                        "rep_class":chrom_insertions[tmp]["rep_class"], 
+                        "rep_family":chrom_insertions[tmp]["rep_family"]
+                    }
+            # Detect nested variations to avoid length/percentages > 100%
+            segments = detect_nested_repeats(window_insertions_dict = window_insertions)
+            # for region, data in segments.items():
+            #     print(f"Region {region}: {data['count']} sequence(s)")
+            #     for entry in data["entries"]:
+            #         print(f"  ID: {entry['id']}, Class: {entry['rep_class']}, Family: {entry['rep_family']}")
+            visited = []
+            for region, data in segments.items():
+                r_start, r_end = region.split("-")
+                len_bp_to_consider = int(r_end) - int(r_start)
+                if data['count'] == 1:
+                    for entry in data["entries"]:
+                        if entry["id"] not in visited:
+                            insertions[chromosome][window][entry['rep_class']][entry['rep_family']]["count"] += 1 
+                            visited.append(entry["id"])
+                        insertions[chromosome][window][entry['rep_class']][entry['rep_family']]["length"] += len_bp_to_consider
+                elif data['count'] >= 2:
+                    insertions[chromosome][window]["nested_repeats"]["NA"]["count"] += 1 
+                    insertions[chromosome][window]["nested_repeats"]["NA"]["length"] += len_bp_to_consider
+
     return(repeats, insertions)
+
+def detect_nested_repeats(window_insertions_dict):
+    """
+    Takes a dictionary of interval entries and returns a dictionary of segments.
+    
+    Keys: "start-end" string
+    Values: {
+        'count': number of overlapping intervals,
+        'entries': list of {id, rep_class, rep_family}
+    }
+    """
+    points = set()
+    for item in window_insertions_dict.values():
+        points.add(item["start"])
+        points.add(item["end"])
+    sorted_points = sorted(points)
+
+    tree = IntervalTree()
+    for key, item in window_insertions_dict.items():
+        tree.addi(item["start"], item["end"], key)
+
+    segments = {}
+
+    for i in range(len(sorted_points) - 1):
+        seg_start = sorted_points[i]
+        seg_end = sorted_points[i + 1]
+        if seg_start == seg_end:
+            continue
+
+        overlaps = tree[seg_start:seg_end]
+        key = f"{seg_start}-{seg_end}"
+        segment_data = {
+            "count": len(overlaps),
+            "entries": []
+        }
+
+        for ov in overlaps:
+            info = window_insertions_dict[ov.data]
+            segment_data["entries"].append({
+                "id": ov.data,
+                "rep_class": info["rep_class"],
+                "rep_family": info["rep_family"]
+            })
+
+        segments[key] = segment_data
+
+    return(segments)
 
 def plot_family_insertions(name, insertions, per_chromosome=False):
     """
     """
-    print("# Running plot_family_insertions function")
+    print("# Running plot_family_insertions function\n")
 
     os.makedirs('analyses', exist_ok=True)
 
@@ -221,7 +294,10 @@ def plot_family_insertions(name, insertions, per_chromosome=False):
     agg_global = df_global.groupby(['rep_class','rep_family'])[['count','length']].sum().reset_index()
 
     # Determine class order
-    class_order = agg_global.groupby('rep_class')['count'].sum().sort_values(ascending=False).index.tolist()
+    if classes_order == None:
+        class_order = agg_global.groupby('rep_class')['count'].sum().sort_values(ascending=False).index.tolist()
+    else:
+        class_order = classes_order
 
     # Base colors per class
     cmap = plt.get_cmap('turbo')
@@ -310,10 +386,10 @@ def plot_family_insertions(name, insertions, per_chromosome=False):
         plt.close(fig)
 
     # Generate plots if not already existing 
-    _plot_stacked(agg_global,'count','Insertion count','Stacked Counts - Whole Genome', f'analyses/{name}_whole_genome_stacked_counts_by_class.png')
-    _plot_stacked(agg_global,'length','Base pair span','Stacked Lengths - Whole Genome', f'analyses/{name}_whole_genome_stacked_lengths_by_class.png')
-    _plot_contiguous(agg_global,'count','Insertion count','Counts by Family - Whole Genome', f'analyses/{name}_whole_genome_contiguous_counts_by_class.png')
-    _plot_contiguous(agg_global,'length','Base pair span','Lengths by Family - Whole Genome', f'analyses/{name}_whole_genome_contiguous_lengths_by_class.png')
+    _plot_stacked(agg_global,'count', 'Insertion count', f'Stacked Counts - Whole Genome - {name}', f'analyses/{name}_whole_genome_stacked_counts_by_class.png')
+    _plot_stacked(agg_global,'length', 'Base pair span', f'Stacked Lengths - Whole Genome - {name}', f'analyses/{name}_whole_genome_stacked_lengths_by_class.png')
+    _plot_contiguous(agg_global,'count', 'Insertion count', f'Counts by Family - Whole Genome - {name}', f'analyses/{name}_whole_genome_contiguous_counts_by_class.png')
+    _plot_contiguous(agg_global,'length', 'Base pair span', f'Lengths by Family - Whole Genome - {name}', f'analyses/{name}_whole_genome_contiguous_lengths_by_class.png')
 
     if per_chromosome:
         for chrom, windows in insertions.items():
@@ -325,17 +401,17 @@ def plot_family_insertions(name, insertions, per_chromosome=False):
             df_chr=pd.DataFrame(rec)
             if df_chr.empty: continue
             agg_chr=df_chr.groupby(['rep_class','rep_family'])[['count','length']].sum().reset_index()
-            _plot_stacked(agg_chr,'count','Insertion count',f'Stacked Counts in chromosome {chrom}',f'analyses/{name}_{chrom}_stacked_counts_by_class.png')
-            _plot_stacked(agg_chr,'length','Base pair span',f'Stacked Lengths in chromosome {chrom}',f'analyses/{name}_{chrom}_stacked_lengths_by_class.png')
-            _plot_contiguous(agg_chr,'count','Insertion count',f'Counts by Family in chromosome {chrom}',f'analyses/{name}_{chrom}_contiguous_counts_by_class.png')
-            _plot_contiguous(agg_chr,'length','Base pair span',f'Lengths by Family in chromosome {chrom}',f'analyses/{name}_{chrom}_contiguous_lengths_by_class.png')
+            _plot_stacked(agg_chr,'count','Insertion count', f'Stacked Counts in chromosome {chrom} - {name}', f'analyses/{name}_{chrom}_stacked_counts_by_class.png')
+            _plot_stacked(agg_chr,'length','Base pair span', f'Stacked Lengths in chromosome {chrom} - {name}', f'analyses/{name}_{chrom}_stacked_lengths_by_class.png')
+            _plot_contiguous(agg_chr,'count','Insertion count', f'Counts by Family in chromosome {chrom} - {name}', f'analyses/{name}_{chrom}_contiguous_counts_by_class.png')
+            _plot_contiguous(agg_chr,'length','Base pair span', f'Lengths by Family in chromosome {chrom} - {name}', f'analyses/{name}_{chrom}_contiguous_lengths_by_class.png')
     
-    return(class_colors_hex, fam_colors)
+    return(class_order, class_colors_hex, fam_colors)
 
-def export_window_class_bed(name, window_size, insertions, windows, class_colors, class_order=None):
+def export_window_class_bed(name, window_size, insertions, windows, class_colors, class_order):
     """
     """
-    print("# Running export_window_class_bed function")
+    print("# Running export_window_class_bed function\n")
 
     os.makedirs('analyses/karyoplot_tables', exist_ok = True)
 
@@ -344,22 +420,6 @@ def export_window_class_bed(name, window_size, insertions, windows, class_colors
     # TO DO 
     # if (os.path.isfile(output_bed)) and (os.stat(output_bed).st_size != 0):
     #     print(f'{output_bed} already exists and isn’t empty. To force recalculation, please delete it first.')
-
-    # Discover all classes present
-    all_classes = sorted({
-        rep_class
-        for chrom_data in insertions.values()
-        for window_dict in chrom_data.values()
-        for rep_class in window_dict.keys()
-    })
-
-    # Determine final class list and order
-    if class_order:
-        # keep only classes that actually exist
-        classes = [c for c in class_order if c in all_classes]
-    else:
-        # default: include all, sorted
-        classes = all_classes
 
     # Build rows
     rows = []
@@ -374,7 +434,7 @@ def export_window_class_bed(name, window_size, insertions, windows, class_colors
             window_len = end - start
             window_karyoplotr = int(start + (window_len/2))
             row = {'chrom': chrom, 'start': start, 'end': end, 'barycenter': window_karyoplotr}
-            for cls in classes:
+            for cls in class_order:
                 fams = insertions.get(chrom, {}).get(win_label, {}).get(cls, {})
                 cnt = sum(m['count'] for m in fams.values())
                 lng = sum(m['length'] for m in fams.values())
@@ -388,20 +448,20 @@ def export_window_class_bed(name, window_size, insertions, windows, class_colors
     df = pd.DataFrame(rows)
 
     # Compute stacked counts
-    count_cols = [f'{cls}_count' for cls in classes]
+    count_cols = [f'{cls}_count' for cls in class_order]
     stacked = df[count_cols].cumsum(axis=1)
-    stacked.columns = [f'{cls}_count_stacked' for cls in classes]
+    stacked.columns = [f'{cls}_count_stacked' for cls in class_order]
     df = pd.concat([df, stacked], axis=1)
 
     # Compute stacked percentages
-    pct_cols = [f'{cls}_pct' for cls in classes]
+    pct_cols = [f'{cls}_pct' for cls in class_order]
     stacked = df[pct_cols].cumsum(axis=1)
-    stacked.columns = [f'{cls}_pct_stacked' for cls in classes]
+    stacked.columns = [f'{cls}_pct_stacked' for cls in class_order]
     df = pd.concat([df, stacked], axis=1)
 
     # Build final column order: chrom, start, end, then per class:
     cols = ['chrom', 'start', 'end', 'barycenter']
-    for cls in classes:
+    for cls in class_order:
         cols.append(f'{cls}_count')
         cols.append(f'{cls}_count_stacked')
         cols.append(f'{cls}_length')
@@ -411,20 +471,23 @@ def export_window_class_bed(name, window_size, insertions, windows, class_colors
     df = df[cols]
     df.to_csv(output_bed, sep='\t', index=False)
 
-    reversed_classes = ",".join(list(reversed(classes)))
+    reversed_classes = ",".join(list(reversed(class_order)))
     tmp_colors = []
-    for cls in classes:
+    for cls in class_order:
         tmp_colors.append(class_colors[cls])
     reversed_colors = ",".join(list(reversed(tmp_colors)))
     return(reversed_classes, reversed_colors)
 
 def plot_karyoplots(name, window_size, genome_file, chromosomes, accessibility, classes, colors):
-    print("# Running plot_karyoplots function")
+    """
+    """
+    print("# Running plot_karyoplots function\n")
 
     # Percentage and counts - Horizontal version
     cmd = f'Rscript scripts/plot_chromosomes.R --name {name} --genome {genome_file} --chromosome {chromosomes} --accessibility {accessibility} --input analyses/karyoplot_tables/{name}_{window_size}_repeat_classes.bed --classesorder {classes} --colorsorder {colors} --output analyses/{name}_{window_size}'
     print(cmd)
     subprocess.run(cmd.split(" "), check=True)
+
     # Percentage and counts - Vertical version
     # cmd = "Rscript scripts/plot_chromosomes_vertical.R --genome " + genome + " --chromosome " + chromosomes_to_plot + " --accessibility " + accessibility + " --input analyses/karyoplotr_tables/rep_classes.bed --classesorder " + reversed_classes + " --colorsorder " + reversed_colors + " --output analyses/"
 
@@ -503,7 +566,7 @@ if __name__ == "__main__":
 
     # Plots (whole genome or list of chromosomes)
 
-    class_colors, fam_colors = plot_family_insertions(
+    class_order, class_colors, fam_colors = plot_family_insertions(
         name = name,
         insertions = insertions, 
         per_chromosome = False
@@ -515,7 +578,7 @@ if __name__ == "__main__":
         windows = windows,
         insertions = insertions, 
         class_colors = class_colors, 
-        class_order = classes_order
+        class_order = class_order
         ) 
     
     plot_karyoplots(
