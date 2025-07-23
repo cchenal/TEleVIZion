@@ -276,7 +276,7 @@ def plot_family_insertions(name, insertions, per_chromosome=False):
     os.makedirs('analyses', exist_ok=True)
 
     # Use Tahoma for all fonts
-    plt.rcParams['font.family'] = 'Tahoma'
+    # plt.rcParams['font.family'] = 'Tahoma'
 
     # 1) Global aggregation for color mapping
     records = []
@@ -372,7 +372,7 @@ def plot_family_insertions(name, insertions, per_chromosome=False):
         ax.set_yticks(y); ax.set_yticklabels(families,fontsize=8)
         ax.invert_yaxis()
         # Extend x-axis limit to include labels
-        ax.set_xlim(0, max(values)*1.1)
+        ax.set_xlim(0, max(values)*1.2)
         ax.set_xlabel(ylabel,weight='bold',labelpad=12)
         ax.set_ylabel('Repeat family',weight='bold',labelpad=12)
         ax.set_title(title,weight='bold',pad=20)

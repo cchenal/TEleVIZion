@@ -106,8 +106,7 @@ if (opt$accessibility != "not_displayed"){
         labels = "Accessibility", 
         data.panel = "ideogram", 
         cex = 0.8, 
-        label.margin = 0.01,
-        family="Tahoma")
+        label.margin = 0.01) # family="Tahoma")
     kpPlotRegions(
         karyoplot = kp, 
         data = accessibility, 
@@ -120,8 +119,7 @@ kpAddBaseNumbers(
     karyoplot = kp, 
     tick.dist = 10000000, 
     tick.len = 3, 
-    tick.col = "black",
-    family="Tahoma", 
+    tick.col = "black", # family="Tahoma" 
     cex = 0.5
 )
 
@@ -147,7 +145,7 @@ kpAxis(
     side = "right", 
     numticks = 5,
     labels = c("0%", "25%", "50%", "75%", "100%"), 
-    cex = 0.8
+    cex = 0.7
 )
 
 # Legend
@@ -224,8 +222,7 @@ if (opt$accessibility != "not_displayed"){
         labels = "Accessibility", 
         data.panel = "ideogram", 
         cex = 0.8, 
-        label.margin = 0.01,
-        family="Tahoma")
+        label.margin = 0.01) # family="Tahoma")
     kpPlotRegions(
         karyoplot = kp, 
         data = accessibility, 
@@ -238,8 +235,7 @@ kpAddBaseNumbers(
     karyoplot = kp, 
     tick.dist = 10000000, 
     tick.len = 3, 
-    tick.col = "black",
-    family="Tahoma", 
+    tick.col = "black", # family="Tahoma" 
     cex = 0.5
 )
 
@@ -265,7 +261,7 @@ kpAxis(
     r1 = 1, 
     side = "right", 
     numticks = 5,
-    cex = 0.8
+    cex = 0.7
 )
 
 # Legend
