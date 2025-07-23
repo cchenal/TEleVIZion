@@ -81,11 +81,11 @@ png(file, width = 29.7, height = 8, units = "cm", res = 300)
 
 # Graphical parameters 
 pp <- getDefaultPlotParams(plot.type=4)
-pp$data1inmargin <- 12 
+pp$data1inmargin <- 14 
 # pp$leftmargin <- 0.085
-pp$topmargin <- 70
+pp$topmargin <- 50
 pp$leftmargin <- 0.02
-pp$rightmargin <- 0.195
+pp$rightmargin <- 0.2
 pp$ideogramlateralmargin <- 0.01
 pp$data2inmargin <- 10
 
@@ -155,7 +155,7 @@ twidth  <- max(strwidth(classes_order, units="user"))
 
 legend(
   x       = 0.87,
-  y       = 1.25,
+  y       = 1,
   legend  = classes_order,
   fill    = colors_order,
   border  = "grey5",
@@ -171,7 +171,7 @@ legend(
 if (opt$accessibility != "not_displayed"){
     legend(
     x       = 0.87,
-    y       = 0,
+    y       = -0.25,
     legend  = c("Low", "High"),
     fill    = c("grey5", "grey95"),
     border  = "grey5", #NA
@@ -185,7 +185,7 @@ if (opt$accessibility != "not_displayed"){
 }
 
 # Title
-title(paste0("Percentage of repeated content along chromosomes - ", name), cex = 0.2)
+title(paste0("Percentage of repeated content along chromosomes - ", name), cex.main = 0.8, line = 2.5)
 
 dev.off()
 
@@ -199,11 +199,11 @@ png(file, width = 29.7, height = 8, units = "cm", res = 300)
 
 # Graphical parameters 
 pp <- getDefaultPlotParams(plot.type=4)
-pp$data1inmargin <- 12 
+pp$data1inmargin <- 14 
 # pp$leftmargin <- 0.085
-pp$topmargin <- 70
+pp$topmargin <- 50
 pp$leftmargin <- 0.02
-pp$rightmargin <- 0.195
+pp$rightmargin <- 0.2
 pp$ideogramlateralmargin <- 0.01
 pp$data2inmargin <- 10
 
@@ -273,7 +273,7 @@ twidth  <- max(strwidth(classes_order, units="user"))
 
 legend(
   x       = 0.87,
-  y       = 1.25,
+  y       = 1,
   legend  = classes_order,
   fill    = colors_order,
   border  = "grey5",
@@ -288,7 +288,7 @@ legend(
 if (opt$accessibility != "not_displayed"){
     legend(
     x       = 0.87,
-    y       = 0,
+    y       = -0.25,
     legend  = c("Low", "High"),
     fill    = c("grey5", "grey95"),
     border  = "grey5", #NA
@@ -302,4 +302,4 @@ if (opt$accessibility != "not_displayed"){
 }
 
 # Title
-title(paste0("Number of insertions along chromosomes - ", name), cex = 0.2)
+title(paste0("Number of insertions along chromosomes - ", name), cex.main = 0.8, line = 2.5)
