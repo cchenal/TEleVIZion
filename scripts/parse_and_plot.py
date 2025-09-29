@@ -12,11 +12,12 @@ from intervaltree import IntervalTree
 def define_windows(genome_file, window_size, chrom_to_plot):
     print("\n\n# Running define_windows function\n")
 
-    windows = {}
+    windows, chrom_names = {}, {}
     for line in open(genome_file).readlines():
         if not line.startswith("chr\tstart"):
             fields = line[:-1].split("\t")
-            chrom, length = fields[0], int(fields[2])
+            chrom, length, name = fields[0], int(fields[2]), fields[3]
+            chrom_names[chrom] = name
             windows[chrom] = []
             for start in range(0, length, window_size):
                 end = min(start + window_size, length)
@@ -29,7 +30,7 @@ def define_windows(genome_file, window_size, chrom_to_plot):
         chroms = ",".join(tmp)
     else:
         chroms = chrom_to_plot
-    return(windows, chroms)
+    return(windows, chroms, chrom_names)
 
 def parse_repeatmasker_output(repeatmasker_file, windows_dict):
     print("# Running parse_repeatmasker_output function\n")
@@ -73,6 +74,7 @@ def parse_repeatmasker_output(repeatmasker_file, windows_dict):
                 insertions[chrom][window][rep_class] = {}
                 for rep_family in repeats[rep_class]:
                     insertions[chrom][window][rep_class][rep_family] = {"count":0, "length":0}
+            insertions[chrom][window]["Overlapping_annotations"] = {"NA": {"count":0, "length":0}} 
     # Fill insertions dict chromosome per chromosome to limit memory usage
     for chromosome in insertions:
         # print(chromosome)
@@ -111,13 +113,53 @@ def parse_repeatmasker_output(repeatmasker_file, windows_dict):
         # Update insertions dict
         for window in insertions[chromosome]:
             coordinates = window.split("-")
+            window_insertions = {}
             for tmp in tmp_insertions:
                 if (tmp_insertions[tmp]["start"] < int(coordinates[2])) and (tmp_insertions[tmp]["end"] > int(coordinates[1])):
                     min_bp_to_consider = max(tmp_insertions[tmp]["start"], int(coordinates[1]))
                     max_bp_to_consider = min(tmp_insertions[tmp]["end"], int(coordinates[2]))
-                    len_bp_to_consider = max_bp_to_consider - min_bp_to_consider
-                    insertions[chromosome][window][tmp_insertions[tmp]["rep_class"]][tmp_insertions[tmp]["rep_family"]]["count"] += 1 
-                    insertions[chromosome][window][tmp_insertions[tmp]["rep_class"]][tmp_insertions[tmp]["rep_family"]]["length"] += len_bp_to_consider
+                    window_insertions[tmp] = {
+                        "chrom":tmp_insertions[tmp]["chrom"], 
+                        "start":min_bp_to_consider, 
+                        "end":max_bp_to_consider, 
+                        "rep_class":tmp_insertions[tmp]["rep_class"], 
+                        "rep_family":tmp_insertions[tmp]["rep_family"]
+                    }
+
+            # Detect overlapping annotations to avoid length/percentages > 100%
+            segments = detect_overlapping_annotations(window_insertions_dict = window_insertions)
+            # for region, data in segments.items():
+            #     print(f"Region {region}: {data['count']} sequence(s)")
+            #     for entry in data["entries"]:
+            #         print(f"  ID: {entry['id']}, Class: {entry['rep_class']}, Family: {entry['rep_family']}")
+            visited = []
+            for region, data in segments.items():
+                r_start, r_end = region.split("-")
+                len_bp_to_consider = int(r_end) - int(r_start)
+                if data['count'] == 1:
+                    for entry in data["entries"]:
+                        if entry["id"] not in visited:
+                            insertions[chromosome][window][entry['rep_class']][entry['rep_family']]["count"] += 1 
+                            visited.append(entry["id"])
+                        insertions[chromosome][window][entry['rep_class']][entry['rep_family']]["length"] += len_bp_to_consider
+                elif data['count'] >= 2:
+                    rep_class_comp, rep_family_comp = [], []
+                    for entry in data["entries"]:
+                        if entry["rep_class"] not in rep_class_comp:
+                            rep_class_comp.append(entry["rep_class"])
+                        if entry["rep_family"] not in rep_family_comp:
+                            rep_family_comp.append(entry["rep_family"])
+                        if entry["id"] not in visited:
+                            visited.append(entry["id"])
+                    if (len(rep_class_comp) == 1) and (len(rep_family_comp) == 1):
+                        # Same rep_class and rep_family
+                        insertions[chromosome][window][rep_class_comp[0]][rep_family_comp[0]]["count"] += 1 
+                        insertions[chromosome][window][rep_class_comp[0]][rep_family_comp[0]]["length"] += len_bp_to_consider
+                    else:
+                        # Different rep_class and/or rep_family
+                        insertions[chromosome][window]["Overlapping_annotations"]["NA"]["count"] += 1 
+                        insertions[chromosome][window]["Overlapping_annotations"]["NA"]["length"] += len_bp_to_consider
+
     return(repeats, insertions)                    
 
 def parse_edta_output(edta_file, windows_dict):
@@ -155,7 +197,7 @@ def parse_edta_output(edta_file, windows_dict):
                 insertions[chrom][window][rep_class] = {}
                 for rep_family in repeats[rep_class]:
                     insertions[chrom][window][rep_class][rep_family] = {"count":0, "length":0}
-            insertions[chrom][window]["nested_repeats"] = {"NA": {"count":0, "length":0}} # Can be refined later (DNA_LTR, DNA_DNA, ...).
+            insertions[chrom][window]["Overlapping_annotations"] = {"NA": {"count":0, "length":0}} # Can be refined later (DNA_LTR, DNA_DNA, ...).
     # Fill insertions dict chromosome per chromosome to limit memory usage
     for chromosome in insertions:
         # print(chromosome)
@@ -200,7 +242,7 @@ def parse_edta_output(edta_file, windows_dict):
                         "rep_family":chrom_insertions[tmp]["rep_family"]
                     }
             # Detect nested variations to avoid length/percentages > 100%
-            segments = detect_nested_repeats(window_insertions_dict = window_insertions)
+            segments = detect_overlapping_annotations(window_insertions_dict = window_insertions)
             # for region, data in segments.items():
             #     print(f"Region {region}: {data['count']} sequence(s)")
             #     for entry in data["entries"]:
@@ -216,12 +258,26 @@ def parse_edta_output(edta_file, windows_dict):
                             visited.append(entry["id"])
                         insertions[chromosome][window][entry['rep_class']][entry['rep_family']]["length"] += len_bp_to_consider
                 elif data['count'] >= 2:
-                    insertions[chromosome][window]["nested_repeats"]["NA"]["count"] += 1 
-                    insertions[chromosome][window]["nested_repeats"]["NA"]["length"] += len_bp_to_consider
+                    rep_class_comp, rep_family_comp = [], []
+                    for entry in data["entries"]:
+                        if entry["rep_class"] not in rep_class_comp:
+                            rep_class_comp.append(entry["rep_class"])
+                        if entry["rep_family"] not in rep_family_comp:
+                            rep_family_comp.append(entry["rep_family"])
+                        if entry["id"] not in visited:
+                            visited.append(entry["id"])
+                    if (len(rep_class_comp) == 1) and (len(rep_family_comp) == 1):
+                        # Same rep_class and rep_family
+                        insertions[chromosome][window][rep_class_comp[0]][rep_family_comp[0]]["count"] += 1 
+                        insertions[chromosome][window][rep_class_comp[0]][rep_family_comp[0]]["length"] += len_bp_to_consider
+                    else:
+                        # Different rep_class and/or rep_family
+                        insertions[chromosome][window]["Overlapping_annotations"]["NA"]["count"] += 1 
+                        insertions[chromosome][window]["Overlapping_annotations"]["NA"]["length"] += len_bp_to_consider
 
     return(repeats, insertions)
 
-def detect_nested_repeats(window_insertions_dict):
+def detect_overlapping_annotations(window_insertions_dict):
     """
     Takes a dictionary of interval entries and returns a dictionary of segments.
     
@@ -268,7 +324,7 @@ def detect_nested_repeats(window_insertions_dict):
 
     return(segments)
 
-def plot_family_insertions(name, insertions, per_chromosome=False):
+def plot_family_insertions(name, insertions, chrom_names_dict, per_chromosome=False, width=10, height=8):
     """
     """
     print("# Running plot_family_insertions function\n")
@@ -322,8 +378,8 @@ def plot_family_insertions(name, insertions, per_chromosome=False):
         base = class_colors[cls]
         fam_colors[cls] = {fam:(base[0],base[1],base[2],alpha) for fam,alpha in zip(fams,alphas)}
 
-    def _plot_stacked(agg_df, metric, ylabel, title, fname):
-        fig, ax = plt.subplots(figsize=(9,8))
+    def _plot_stacked(agg_df, metric, ylabel, title, fname, width=10, height=8):
+        fig, ax = plt.subplots(figsize=(width,height))
         x = np.arange(len(class_order))
         xt = [cls.replace('_','\n') for cls in class_order]
         for i,cls in enumerate(class_order):
@@ -335,7 +391,7 @@ def plot_family_insertions(name, insertions, per_chromosome=False):
                 val=int(agg_df.loc[mask,metric].values[0])
                 ax.bar(i,val,bottom=bottom,width=0.4,color=rgba,edgecolor="white",linewidth=0.3)
                 bottom+=val; total+=val
-            ax.text(i,total,str(total),ha='center',va='bottom')
+            ax.text(i,total,f"{total:_}".replace("_", " "),ha='center',va='bottom') 
         # legend
         handles=[]
         for cls in class_order:
@@ -343,18 +399,19 @@ def plot_family_insertions(name, insertions, per_chromosome=False):
                 rgba=fam_colors[cls][fam]
                 mask=(agg_df['rep_class']==cls)&(agg_df['rep_family']==fam)
                 val=int(agg_df.loc[mask,metric].values[0]) if mask.any() else 0
-                handles.append(mpatches.Patch(color=rgba,label=f"{fam} ({val})"))
+                val_to_print = f"{val:_}".replace("_", " ")
+                handles.append(mpatches.Patch(color=rgba,label=f"{fam} ({val_to_print})")) 
         ax.set_xticks(x); ax.set_xticklabels(xt,rotation=0)
         ax.set_xlabel('Repeat class',weight='bold',labelpad=12)
         ax.set_ylabel(ylabel,weight='bold',labelpad=12)
         ax.set_title(title,weight='bold',pad=20)
-        ax.legend(handles=handles,title='Families',loc='upper left',bbox_to_anchor=(1.05,1),ncol=1,fontsize='small')
+        ax.legend(handles=handles,title='Type',loc='upper left',bbox_to_anchor=(1.05,1),ncol=1,fontsize='small')
         plt.tight_layout()
         fig.savefig(f'{fname}',bbox_inches='tight')
         plt.close(fig)
 
-    def _plot_contiguous(agg_df, metric, ylabel, title, fname):
-        fig, ax = plt.subplots(figsize=(9,8))
+    def _plot_contiguous(agg_df, metric, ylabel, title, fname, width=width, height=height):
+        fig, ax = plt.subplots(figsize=(width,height))
         families=[]; values=[]; colors=[]
         for cls in class_order:
             for fam,rgba in fam_colors[cls].items():
@@ -368,13 +425,13 @@ def plot_family_insertions(name, insertions, per_chromosome=False):
         ax.barh(y, values, color=colors, height=0.6)
         # Annotate each bar with spacing and non-bold
         for yi, val in zip(y, values):
-            ax.text(val + max(values)*0.01, yi, str(val), va='center', ha='left')
-        ax.set_yticks(y); ax.set_yticklabels(families,fontsize=8)
+            ax.text(val + max(values)*0.01, yi, f"{val:_}".replace("_", " "), va='center', ha='left')
+        ax.set_yticks(y); ax.set_yticklabels(families) # ,fontsize=8
         ax.invert_yaxis()
         # Extend x-axis limit to include labels
         ax.set_xlim(0, max(values)*1.2)
         ax.set_xlabel(ylabel,weight='bold',labelpad=12)
-        ax.set_ylabel('Repeat family',weight='bold',labelpad=12)
+        ax.set_ylabel('Repeat type',weight='bold',labelpad=12)
         ax.set_title(title,weight='bold',pad=20)
         # legend of classes
         legend_handles = [mpatches.Patch(color=class_colors_hex[cls], label=cls)
@@ -386,10 +443,10 @@ def plot_family_insertions(name, insertions, per_chromosome=False):
         plt.close(fig)
 
     # Generate plots if not already existing 
-    _plot_stacked(agg_global,'count', 'Insertion count', f'Stacked Counts - Whole Genome - {name}', f'analyses/{name}_whole_genome_stacked_counts_by_class.png')
-    _plot_stacked(agg_global,'length', 'Base pair span', f'Stacked Lengths - Whole Genome - {name}', f'analyses/{name}_whole_genome_stacked_lengths_by_class.png')
-    _plot_contiguous(agg_global,'count', 'Insertion count', f'Counts by Family - Whole Genome - {name}', f'analyses/{name}_whole_genome_contiguous_counts_by_class.png')
-    _plot_contiguous(agg_global,'length', 'Base pair span', f'Lengths by Family - Whole Genome - {name}', f'analyses/{name}_whole_genome_contiguous_lengths_by_class.png')
+    _plot_stacked(agg_global,'count', 'Insertion count', f'Stacked Counts - Whole Genome - {name}', f'analyses/{name}_whole_genome_stacked_counts_by_class.png', width=width, height=height)
+    _plot_stacked(agg_global,'length', 'Base pair span', f'Stacked Lengths - Whole Genome - {name}', f'analyses/{name}_whole_genome_stacked_lengths_by_class.png', width=width, height=height)
+    _plot_contiguous(agg_global,'count', 'Insertion count', f'Counts by Type - Whole Genome - {name}', f'analyses/{name}_whole_genome_contiguous_counts_by_class.png', width=width, height=height)
+    _plot_contiguous(agg_global,'length', 'Base pair span', f'Lengths by Type - Whole Genome - {name}', f'analyses/{name}_whole_genome_contiguous_lengths_by_class.png', width=width, height=height)
 
     if per_chromosome:
         for chrom, windows in insertions.items():
@@ -401,10 +458,10 @@ def plot_family_insertions(name, insertions, per_chromosome=False):
             df_chr=pd.DataFrame(rec)
             if df_chr.empty: continue
             agg_chr=df_chr.groupby(['rep_class','rep_family'])[['count','length']].sum().reset_index()
-            _plot_stacked(agg_chr,'count','Insertion count', f'Stacked Counts in chromosome {chrom} - {name}', f'analyses/{name}_{chrom}_stacked_counts_by_class.png')
-            _plot_stacked(agg_chr,'length','Base pair span', f'Stacked Lengths in chromosome {chrom} - {name}', f'analyses/{name}_{chrom}_stacked_lengths_by_class.png')
-            _plot_contiguous(agg_chr,'count','Insertion count', f'Counts by Family in chromosome {chrom} - {name}', f'analyses/{name}_{chrom}_contiguous_counts_by_class.png')
-            _plot_contiguous(agg_chr,'length','Base pair span', f'Lengths by Family in chromosome {chrom} - {name}', f'analyses/{name}_{chrom}_contiguous_lengths_by_class.png')
+            _plot_stacked(agg_chr,'count','Insertion count', f'Stacked Counts in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}_{chrom_names[chrom]}_stacked_counts_by_class.png', width=width, height=height)
+            _plot_stacked(agg_chr,'length','Base pair span', f'Stacked Lengths in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}_{chrom_names[chrom]}_stacked_lengths_by_class.png', width=width, height=height)
+            _plot_contiguous(agg_chr,'count','Insertion count', f'Counts by Type in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}_{chrom_names[chrom]}_contiguous_counts_by_class.png', width=width, height=height)
+            _plot_contiguous(agg_chr,'length','Base pair span', f'Lengths by Type in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}_{chrom_names[chrom]}_contiguous_lengths_by_class.png', width=width, height=height)
     
     return(class_order, class_colors_hex, fam_colors)
 
@@ -508,6 +565,8 @@ if __name__ == "__main__":
     parser.add_argument("--chromtoplot", required=False, type=str, default="all")
     parser.add_argument("--classesorder", required=False, type=str, default=None)
     parser.add_argument("--accessibility", required=False, type=str, default=None)
+    parser.add_argument("--perchromosome", required=False, type=str, default=None)
+    parser.add_argument("--figsize", required=False, type=str, default=None)
 
     args = parser.parse_args()
 
@@ -540,12 +599,23 @@ if __name__ == "__main__":
     else:
         accessibility = "not_displayed"
 
+    if (args.perchromosome == None) or (args.perchromosome == "False"):
+        per_chrom = False
+    else:
+        per_chrom = True
+
+    if args.figsize != None:
+        tmp = args.figsize.split(",")
+        width, height = int(tmp[0]), int(tmp[1])
+    else:
+        width, height = 10, 8
+
 
     ### CODE
 
     # Define windows 
 
-    windows, chromosomes_to_plot = define_windows(
+    windows, chromosomes_to_plot, chrom_names = define_windows(
         genome_file = genome, 
         window_size = window_size,
         chrom_to_plot = chrom_to_plot
@@ -569,7 +639,10 @@ if __name__ == "__main__":
     class_order, class_colors, fam_colors = plot_family_insertions(
         name = name,
         insertions = insertions, 
-        per_chromosome = False
+        per_chromosome = per_chrom,
+        chrom_names_dict = chrom_names,
+        width = width,
+        height = height
         )
     
     reversed_classes, reversed_colors = export_window_class_bed(
@@ -592,4 +665,5 @@ if __name__ == "__main__":
     )
 
 
-# Usage: python3 scripts/parse_and_plot.py --repeatmasker data/RepeatMasker/ngousso_chr.fasta.out --genome data/genomes/Ngousso/chromosomes_chr.tsv --windowsize 500000 --classesorder Simple_repeat,Low_complexity,DNA,LINE,LTR,SINE,Undetermined
+# Usage: TEleVIZion % python3 scripts/parse_and_plot.py --edta data/EDTA/GCA_943734845.1.sanitised.fa.mod.EDTA.TEanno.gff3 --genome data/EDTA/GCA_943734845.1_metadata.txt --windowsize 500000 --chromtoplot 2RL,3RL,X --classesorder unknown,Overlapping_annotations,LINE,MITE,DNA,LTR --name GCA_943734845.1
+# python3 scripts/parse_and_plot.py --genome data/genomes/Ngousso/chromosomes_chr.tsv --accessibility data/genomes/Ngousso/accessibility.tsv --repeatmasker data/RepeatMasker/ngousso_chr.fasta.out --windowsize 500000 --chromtoplot Chr_2R,Chr_2L,Chr_3R,Chr_3L,Chr_X --name Ngousso --perchromosome False --classesorder Undetermined,Overlapping_annotations,Simple_repeat,Low_complexity,DNA,LINE,LTR,SINE

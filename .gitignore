@@ -189,6 +189,4 @@ data/.DS_Store
 data/.DS_Store
 data/RepeatMasker/ngousso_chr.fasta.out
 .DS_Store
-data/EDTA/GCA_943734845.1.sanitised.fa.mod.EDTA.TEanno.gff3
-data/EDTA/GCA_943734845.1_metadata.txt
-data/EDTA/GCA_943734845.1_scaff_lengths.tsv
+data/EDTA/*
