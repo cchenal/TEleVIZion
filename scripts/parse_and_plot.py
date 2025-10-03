@@ -32,6 +32,24 @@ def define_windows(genome_file, window_size, chrom_to_plot):
         chroms = chrom_to_plot
     return(windows, chroms, chrom_names)
 
+def parse_repeatmasker_kimura(repeatmasker_kimura_file):
+    print("# Running parse_repeatmasker_kimura function\n")
+
+    kimura_div = {}
+    for line in open(repeatmasker_kimura_file).readlines():
+        # Get rid of human friendly formatting 
+        pseudo_fields = line[:-1].split()
+        fields = []
+        for f in pseudo_fields : 
+            if len(f) > 0 :
+                fields.append(f)
+        if (len(fields) > 0):
+            if (not fields[0].isdigit()) and (fields[0] not in ["Jukes/Cantor", "=================================================================", "File:", "Weighted", "Class", "-----", "Coverage", "Div"]):
+                if fields[4] == "----":
+                    fields[4] = 0
+                kimura_div[fields[1]] = float(fields[4])
+    return(kimura_div)
+
 def parse_repeatmasker_output(repeatmasker_file, windows_dict):
     print("# Running parse_repeatmasker_output function\n")
     
@@ -324,17 +342,12 @@ def detect_overlapping_annotations(window_insertions_dict):
 
     return(segments)
 
-def plot_family_insertions(name, insertions, chrom_names_dict, per_chromosome=False, width=10, height=8):
+def manage_colors(insertions, classes_order, palette = None):
     """
     """
-    print("# Running plot_family_insertions function\n")
+    print("# Running manage_colors function\n")
 
-    os.makedirs('analyses', exist_ok=True)
-
-    # Use Tahoma for all fonts
-    # plt.rcParams['font.family'] = 'Tahoma'
-
-    # 1) Global aggregation for color mapping
+    # Global aggregation for color mapping
     records = []
     for chrom_windows in insertions.values():
         for classes in chrom_windows.values():
@@ -347,36 +360,105 @@ def plot_family_insertions(name, insertions, chrom_names_dict, per_chromosome=Fa
                         'length': metrics['length']
                     })
     df_global = pd.DataFrame(records)
-    agg_global = df_global.groupby(['rep_class','rep_family'])[['count','length']].sum().reset_index()
+    agg_global = df_global.groupby(['rep_class','rep_family'])[['length','count']].sum().reset_index()
 
     # Determine class order
     if classes_order == None:
-        class_order = agg_global.groupby('rep_class')['count'].sum().sort_values(ascending=False).index.tolist()
+        class_order = agg_global.groupby('rep_class')['length'].sum().sort_values(ascending=False).index.tolist()
     else:
         class_order = classes_order
-
-    # Base colors per class
-    cmap = plt.get_cmap('turbo')
     n = max(len(class_order)-1,1)
-    class_colors = {cls: cmap(i/n) for i,cls in enumerate(class_order)}
-    # # Re‐cast to pure Python floats:
-    # class_colors_py = {
-    #     cls: tuple(float(x) for x in rgba)
-    #     for cls, rgba in class_colors.items()
-    # }
-    # Convert to hex strings (including the alpha channel):
-    class_colors_hex = {
-        cls: to_hex(rgba, keep_alpha=True)
-        for cls, rgba in class_colors.items()
-    }
 
-    # Family alpha mapping
-    fam_colors = {}
+    fam_colors, class_colors, class_colors_hex = {}, {}, {}
+
+    if palette == None:
+        cmap = plt.get_cmap('turbo')
+        class_colors = {cls: cmap(i/n) for i,cls in enumerate(class_order)}
+        # # Re‐cast to pure Python floats:
+        # class_colors_py = {
+        #     cls: tuple(float(x) for x in rgba)
+        #     for cls, rgba in class_colors.items()
+        # }
+        # Convert to hex strings (including the alpha channel):
+        class_colors_hex = {
+            cls: to_hex(rgba, keep_alpha=True)
+            for cls, rgba in class_colors.items()
+        }
+
+    else:
+        # Make sure to know all classes present in your TE annotation file
+        # scripts/palette.tsv should end by "\n"
+        homemade_palette = {}
+        for line in open(palette).readlines():
+            desc, r, g, b, hex, cat = line[:-1].split("\t")
+            for category in cat.split(","):
+                homemade_palette[category] = {"r":int(r), "g":int(g), "b":int(b), "hex":hex}
+        for cls in class_order:
+            class_colors[cls] = [homemade_palette[cls]["r"]/255, homemade_palette[cls]["g"]/255, homemade_palette[cls]["b"]/255, 1]
+            class_colors_hex[cls] = homemade_palette[cls]["hex"]
+
+    # Family mapping
     for cls in class_order:
-        fams = agg_global[agg_global['rep_class']==cls].sort_values('count',ascending=False)['rep_family'].tolist()
+        fams = agg_global[agg_global['rep_class']==cls].sort_values('length',ascending=False)['rep_family'].tolist()
         alphas = np.linspace(1.0,0.3,len(fams))
         base = class_colors[cls]
         fam_colors[cls] = {fam:(base[0],base[1],base[2],alpha) for fam,alpha in zip(fams,alphas)}
+
+    return(agg_global, class_order, class_colors_hex, fam_colors)
+
+def plot_family_insertions(name, insertions, chrom_names, agg_global, class_order, class_colors_hex, fam_colors, per_chromosome=False, width=10, height=8):
+    """
+    """
+    print("# Running plot_family_insertions function\n")
+
+    os.makedirs('analyses', exist_ok=True)
+
+    # Use Tahoma for all fonts
+    # plt.rcParams['font.family'] = 'Tahoma'
+
+    # # 1) Global aggregation for color mapping
+    # records = []
+    # for chrom_windows in insertions.values():
+    #     for classes in chrom_windows.values():
+    #         for rep_class, families in classes.items():
+    #             for rep_family, metrics in families.items():
+    #                 records.append({
+    #                     'rep_class': rep_class,
+    #                     'rep_family': rep_family,
+    #                     'count': metrics['count'],
+    #                     'length': metrics['length']
+    #                 })
+    # df_global = pd.DataFrame(records)
+    # agg_global = df_global.groupby(['rep_class','rep_family'])[['count','length']].sum().reset_index()
+
+    # # Determine class order
+    # if classes_order == None:
+    #     class_order = agg_global.groupby('rep_class')['count'].sum().sort_values(ascending=False).index.tolist()
+    # else:
+    #     class_order = classes_order
+
+    # # Base colors per class
+    # cmap = plt.get_cmap('turbo')
+    # n = max(len(class_order)-1,1)
+    # class_colors = {cls: cmap(i/n) for i,cls in enumerate(class_order)}
+    # # # Re‐cast to pure Python floats:
+    # # class_colors_py = {
+    # #     cls: tuple(float(x) for x in rgba)
+    # #     for cls, rgba in class_colors.items()
+    # # }
+    # # Convert to hex strings (including the alpha channel):
+    # class_colors_hex = {
+    #     cls: to_hex(rgba, keep_alpha=True)
+    #     for cls, rgba in class_colors.items()
+    # }
+
+    # # Family alpha mapping
+    # fam_colors = {}
+    # for cls in class_order:
+    #     fams = agg_global[agg_global['rep_class']==cls].sort_values('count',ascending=False)['rep_family'].tolist()
+    #     alphas = np.linspace(1.0,0.3,len(fams))
+    #     base = class_colors[cls]
+    #     fam_colors[cls] = {fam:(base[0],base[1],base[2],alpha) for fam,alpha in zip(fams,alphas)}
 
     def _plot_stacked(agg_df, metric, ylabel, title, fname, width=10, height=8):
         fig, ax = plt.subplots(figsize=(width,height))
@@ -463,7 +545,7 @@ def plot_family_insertions(name, insertions, chrom_names_dict, per_chromosome=Fa
             _plot_contiguous(agg_chr,'count','Insertion count', f'Counts by Type in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}_{chrom_names[chrom]}_contiguous_counts_by_class.png', width=width, height=height)
             _plot_contiguous(agg_chr,'length','Base pair span', f'Lengths by Type in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}_{chrom_names[chrom]}_contiguous_lengths_by_class.png', width=width, height=height)
     
-    return(class_order, class_colors_hex, fam_colors)
+    # return(class_order, class_colors_hex, fam_colors)
 
 def export_window_class_bed(name, window_size, insertions, windows, class_colors, class_order):
     """
@@ -535,13 +617,13 @@ def export_window_class_bed(name, window_size, insertions, windows, class_colors
     reversed_colors = ",".join(list(reversed(tmp_colors)))
     return(reversed_classes, reversed_colors)
 
-def plot_karyoplots(name, window_size, genome_file, chromosomes, accessibility, classes, colors):
+def plot_karyoplots(name, window_size, genome_file, chromosomes, accessibility, classes, colors, plot_per_class):
     """
     """
     print("# Running plot_karyoplots function\n")
 
     # Percentage and counts - Horizontal version
-    cmd = f'Rscript scripts/plot_chromosomes.R --name {name} --genome {genome_file} --chromosome {chromosomes} --accessibility {accessibility} --input analyses/karyoplot_tables/{name}_{window_size}_repeat_classes.bed --classesorder {classes} --colorsorder {colors} --output analyses/{name}_{window_size}'
+    cmd = f'Rscript scripts/plot_chromosomes.R --name {name} --genome {genome_file} --chromosome {chromosomes} --accessibility {accessibility} --input analyses/karyoplot_tables/{name}_{window_size}_repeat_classes.bed --classesorder {classes} --perclass {plot_per_class} --colorsorder {colors} --output analyses/{name}_{window_size}'
     print(cmd)
     subprocess.run(cmd.split(" "), check=True)
 
@@ -560,55 +642,88 @@ if __name__ == "__main__":
     parser.add_argument("--name", required=False, type=str, default="output")
     parser.add_argument("--genome", required=True, type=str)
     parser.add_argument("--repeatmasker", required=False, type=str, default=None) 
+    parser.add_argument("--kimura", required=False, type=str, default=None) 
     parser.add_argument("--edta", required=False, type=str, default=None) 
     parser.add_argument("--windowsize", required=False, type=int, default=10000)
     parser.add_argument("--chromtoplot", required=False, type=str, default="all")
-    parser.add_argument("--classesorder", required=False, type=str, default=None)
-    parser.add_argument("--accessibility", required=False, type=str, default=None)
     parser.add_argument("--perchromosome", required=False, type=str, default=None)
+    parser.add_argument("--classesorder", required=False, type=str, default=None)
+    parser.add_argument("--perclass", required=False, type=str, default=None) 
+    parser.add_argument("--accessibility", required=False, type=str, default=None)
     parser.add_argument("--figsize", required=False, type=str, default=None)
+    parser.add_argument("--palette", required=False, type=str, default=None)
 
     args = parser.parse_args()
 
+    print(f"\nTEleVIZion is on!\n")
+
     name = args.name
+    print(f"Name: {name}")
 
     genome = args.genome
+    print(f"Genome file: {genome}")
 
     if args.repeatmasker != None:
         file = args.repeatmasker 
+        file_type = "RepeatMasker"
     elif args.edta != None:
         file = args.edta 
+        file_type = "EDTA"
     else: 
-        print("You should provide an inut file using --repeatmasker or --edta")
+        print("You should provide an input file using --repeatmasker or --edta")
         sys.exit()
+    print(f"Input file ({file_type}): {file}")
+
+    if args.kimura != None:
+        kimura_file = args.kimura 
 
     window_size = args.windowsize
+    print(f"Window size: {window_size}")
 
     if args.chromtoplot != "all":
         chrom_to_plot = args.chromtoplot
     else:
         chrom_to_plot = "all"
+    print(f"Chromosomes to plot: {chrom_to_plot}")
 
     if args.classesorder != None:
         classes_order = args.classesorder.split(",")
     else:
         classes_order = None
+    print(f"Classes order: {classes_order}")
+    # For now, please don't remove any class, stacked plots won't be trustworthy 
 
     if args.accessibility != None:
         accessibility = args.accessibility 
     else:
         accessibility = "not_displayed"
+    print(f"Accessibility: {accessibility}")
 
     if (args.perchromosome == None) or (args.perchromosome == "False"):
         per_chrom = False
     else:
         per_chrom = True
+    print(f"Additional plots per chromosome: {per_chrom}")
+
+    if (args.perclass == None) or (args.perclass == "False"):
+        per_class = False
+    else:
+        per_class = True
+    print(f"Additional plots per class: {per_class}")
 
     if args.figsize != None:
         tmp = args.figsize.split(",")
         width, height = int(tmp[0]), int(tmp[1])
     else:
         width, height = 10, 8
+    print(f"Figure size for histograms: {width}, {height}")
+    
+    if args.palette == None:
+        palette_type = "False, switch to default"
+    else:
+        palette_type = args.palette
+    palette = args.palette
+    print(f"Homemade palette: {palette_type}")
 
 
     ### CODE
@@ -628,6 +743,10 @@ if __name__ == "__main__":
             repeatmasker_file = file,
             windows_dict = windows
         )
+        if args.kimura != None:
+            kimura_dict = parse_repeatmasker_kimura(
+                repeatmasker_kimura_file = kimura_file
+            )
     elif args.edta != None:
         repeats, insertions = parse_edta_output(
             edta_file = file,
@@ -636,21 +755,31 @@ if __name__ == "__main__":
 
     # Plots (whole genome or list of chromosomes)
 
-    class_order, class_colors, fam_colors = plot_family_insertions(
+    agg_global, class_order, class_colors_hex, fam_colors = manage_colors(
+        insertions = insertions, 
+        classes_order = classes_order,
+        palette = palette
+        )
+    
+    plot_family_insertions(
         name = name,
         insertions = insertions, 
         per_chromosome = per_chrom,
-        chrom_names_dict = chrom_names,
+        chrom_names = chrom_names,
+        agg_global = agg_global,
+        class_order = class_order,
+        class_colors_hex = class_colors_hex,
+        fam_colors = fam_colors,
         width = width,
         height = height
         )
-    
+           
     reversed_classes, reversed_colors = export_window_class_bed(
         name = name,
         window_size = window_size,
         windows = windows,
         insertions = insertions, 
-        class_colors = class_colors, 
+        class_colors = class_colors_hex, 
         class_order = class_order
         ) 
     
@@ -661,7 +790,8 @@ if __name__ == "__main__":
         chromosomes = chromosomes_to_plot, 
         accessibility = accessibility, 
         classes = reversed_classes, 
-        colors = reversed_colors
+        colors = reversed_colors,
+        plot_per_class = per_class
     )
 
 

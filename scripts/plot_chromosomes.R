@@ -17,6 +17,7 @@ option_list = list(
   make_option(c("-a", "--accessibility"), type="character", default="not_displayed", help="genome accessibility file name, tabulated: [chr, start, end, name, itemRgb]", metavar="character"), 
   make_option(c("-i", "--input"), type="character", default=NULL, help="input file name, tabulated: [chr, start, end, <areas>]", metavar="character"), 
   make_option(c("-k", "--classesorder"), type="character", default=NULL, help="classes order, should be reversed for display purposes, use comma", metavar="character"), 
+  make_option(c("-p", "--perclass"), type="character", default=NULL, help="plot additional karyoplots", metavar="character"), 
   make_option(c("-l", "--colorsorder"), type="character", default=NULL, help="colors order, should be reversed for display purposes, use comma", metavar="character"), 
   make_option(c("-o", "--output"), type="character", default=NULL, help="output prefix file name [default= %default]", metavar="character")
 ); 
@@ -79,6 +80,9 @@ if (opt$accessibility != "not_displayed"){
 
 ### Percentage of repeats along the genome
 
+
+##### All classes
+
 file <- paste0(opt$output, "_karyoplot_stacked_percentage_by_class.png")
 png(file, width = 29.7, height = 8, units = "cm", res = 300)
 
@@ -88,7 +92,7 @@ pp$data1inmargin <- 14
 # pp$leftmargin <- 0.085
 pp$topmargin <- 50
 pp$leftmargin <- 0.02
-pp$rightmargin <- 0.2
+pp$rightmargin <- 0.24
 pp$ideogramlateralmargin <- 0.01
 pp$data2inmargin <- 10
 
@@ -105,12 +109,12 @@ kpAddChromosomeNames(kp, chr.names = ordered_names, cex = 0.8)
 
 # Painting loci according to their accessibility
 if (opt$accessibility != "not_displayed"){
-    kpAddLabels(
-        karyoplot = kp, 
-        labels = "Accessibility", 
-        data.panel = "ideogram", 
-        cex = 0.8, 
-        label.margin = 0.01) # family="Tahoma")
+    # kpAddLabels(
+    #     karyoplot = kp, 
+    #     labels = "Accessibility", 
+    #     data.panel = "ideogram", 
+    #     cex = 0.8, 
+    #     label.margin = 0.01) # family="Tahoma")
     kpPlotRegions(
         karyoplot = kp, 
         data = accessibility, 
@@ -156,7 +160,7 @@ kpAxis(
 twidth  <- max(strwidth(classes_order, units="user"))
 
 legend(
-  x       = 0.87,
+  x       = 0.82,
   y       = 1,
   legend  = classes_order,
   fill    = colors_order,
@@ -172,7 +176,7 @@ legend(
 # if (is.character(opt$accessibility)){
 if (opt$accessibility != "not_displayed"){
     legend(
-    x       = 0.87,
+    x       = 0.82,
     y       = -0.25,
     legend  = c("Low", "High"),
     fill    = c("grey5", "grey95"),
@@ -192,9 +196,133 @@ title(paste0("Percentage of repeated content along chromosomes - ", name), cex.m
 dev.off()
 
 
+##### Per class
+
+if (!is.null(opt$perclass)){
+  for (cls in classes_order) {
+
+    file <- paste0(opt$output, "_karyoplot_stacked_percentage_", cls, ".png")
+    png(file, width = 29.7, height = 8, units = "cm", res = 300)
+
+    # Graphical parameters 
+    pp <- getDefaultPlotParams(plot.type=4)
+    pp$data1inmargin <- 14 
+    # pp$leftmargin <- 0.085
+    pp$topmargin <- 50
+    pp$leftmargin <- 0.02
+    pp$rightmargin <- 0.24
+    pp$ideogramlateralmargin <- 0.01
+    pp$data2inmargin <- 10
+
+    # Plotting the outline of each chromosome
+    kp <- plotKaryotype(
+        genome = genome, 
+        # cytobands = genome, 
+        chromosomes = chromosome_order, 
+        plot.type = 4, 
+        plot.params = pp,
+        labels.plotter = NULL
+    )
+    kpAddChromosomeNames(kp, chr.names = ordered_names, cex = 0.8)
+
+    # Painting loci according to their accessibility
+    if (opt$accessibility != "not_displayed"){
+        # kpAddLabels(
+        #     karyoplot = kp, 
+        #     labels = "Accessibility", 
+        #     data.panel = "ideogram", 
+        #     cex = 0.8, 
+        #     label.margin = 0.01) # family="Tahoma")
+        kpPlotRegions(
+            karyoplot = kp, 
+            data = accessibility, 
+            col = accessibility$itemRgb, 
+            data.panel = "ideogram")
+    }
+
+    # Adding the scale along each chromosome 
+    kpAddBaseNumbers(
+        karyoplot = kp, 
+        tick.dist = 10000000, 
+        tick.len = 3, 
+        tick.col = "black", # family="Tahoma" 
+        cex = 0.5
+    )
+
+    # Background
+    kpDataBackground(kp, data.panel = 1, col="grey96")
+
+    # Area
+    # kpAddLabels(kp, labels="Percentage\nof repeated\ncontent along\nthe genome", data.panel=1, r0=0, r1=1, cex = 0.8, family="Tahoma")
+    columns <- paste0(classes_order, "_pct")
+    for (i in 1:length(columns)){
+      if (columns[i] == paste0(cls, "_pct")) {
+        kpArea(kp, chr=data$chrom, x=data$barycenter, y=data[[columns[i]]], col=colors_order[i], border="NA", r0=0, r1=1)
+      }
+    }    
+
+    # Add the plot's scale
+    kpAxis(
+        karyoplot = kp, 
+        data.panel = 1, 
+        # ymin = 0, 
+        # ymax = 100, 
+        r0 = 0, 
+        r1 = 1, 
+        side = "right", 
+        numticks = 5,
+        labels = c("0%", "25%", "50%", "75%", "100%"), 
+        cex = 0.7
+    )
+
+    # Legend
+    twidth  <- max(strwidth(classes_order, units="user"))
+
+    legend(
+      x       = 0.82,
+      y       = 1,
+      legend  = classes_order,
+      fill    = colors_order,
+      border  = "grey5",
+      bty     = "o",
+      box.lwd = 0.3,
+      title   = "Repeat class",
+      cex     = 0.8,
+      text.width = twidth,
+      xpd = TRUE
+    )
+
+    # if (is.character(opt$accessibility)){
+    if (opt$accessibility != "not_displayed"){
+        legend(
+        x       = 0.82,
+        y       = -0.25,
+        legend  = c("Low", "High"),
+        fill    = c("grey5", "grey95"),
+        border  = "grey5", #NA
+        bty     = "o",
+        box.lwd = 0.3,
+        title   = "Accessibility",
+        cex     = 0.8,
+        text.width = twidth,
+        xpd = TRUE
+        )
+    }
+
+    # Title
+    title(paste0("Percentage of ", cls, " content along chromosomes - ", name), cex.main = 0.8, line = 2.5)
+
+    dev.off()
+  }
+}
+
+
+
 
 
 ### Number of insertions along the genome 
+
+##### All classes
 
 file <- paste0(opt$output, "_karyoplot_stacked_counts_by_class.png")
 png(file, width = 29.7, height = 8, units = "cm", res = 300)
@@ -205,7 +333,7 @@ pp$data1inmargin <- 14
 # pp$leftmargin <- 0.085
 pp$topmargin <- 50
 pp$leftmargin <- 0.02
-pp$rightmargin <- 0.2
+pp$rightmargin <- 0.24
 pp$ideogramlateralmargin <- 0.01
 pp$data2inmargin <- 10
 
@@ -215,19 +343,19 @@ kp <- plotKaryotype(
     # cytobands = genome, 
     chromosomes = chromosome_order, 
     plot.type = 4, 
-    plot.params = pp,,
+    plot.params = pp,
     labels.plotter = NULL
 )
 kpAddChromosomeNames(kp, chr.names = ordered_names, cex = 0.8)
 
 # Painting loci according to their accessibility
 if (opt$accessibility != "not_displayed"){
-    kpAddLabels(
-        karyoplot = kp, 
-        labels = "Accessibility", 
-        data.panel = "ideogram", 
-        cex = 0.8, 
-        label.margin = 0.01) # family="Tahoma")
+    # kpAddLabels(
+    #     karyoplot = kp, 
+    #     labels = "Accessibility", 
+    #     data.panel = "ideogram", 
+    #     cex = 0.8, 
+    #     label.margin = 0.01) # family="Tahoma")
     kpPlotRegions(
         karyoplot = kp, 
         data = accessibility, 
@@ -273,7 +401,7 @@ kpAxis(
 twidth  <- max(strwidth(classes_order, units="user"))
 
 legend(
-  x       = 0.87,
+  x       = 0.82,
   y       = 1,
   legend  = classes_order,
   fill    = colors_order,
@@ -288,7 +416,7 @@ legend(
 
 if (opt$accessibility != "not_displayed"){
     legend(
-    x       = 0.87,
+    x       = 0.82,
     y       = -0.25,
     legend  = c("Low", "High"),
     fill    = c("grey5", "grey95"),
@@ -304,3 +432,121 @@ if (opt$accessibility != "not_displayed"){
 
 # Title
 title(paste0("Number of insertions along chromosomes - ", name), cex.main = 0.8, line = 2.5)
+
+
+##### Per class 
+
+if (!is.null(opt$perclass)){
+  for (cls in classes_order) {
+    file <- paste0(opt$output, "_karyoplot_stacked_counts_", cls, ".png")
+    png(file, width = 29.7, height = 8, units = "cm", res = 300)
+
+    # Graphical parameters 
+    pp <- getDefaultPlotParams(plot.type=4)
+    pp$data1inmargin <- 14 
+    # pp$leftmargin <- 0.085
+    pp$topmargin <- 50
+    pp$leftmargin <- 0.02
+    pp$rightmargin <- 0.24
+    pp$ideogramlateralmargin <- 0.01
+    pp$data2inmargin <- 10
+
+    # Plotting the outline of each chromosome
+    kp <- plotKaryotype(
+        genome = genome, 
+        # cytobands = genome, 
+        chromosomes = chromosome_order, 
+        plot.type = 4, 
+        plot.params = pp,
+        labels.plotter = NULL
+    )
+    kpAddChromosomeNames(kp, chr.names = ordered_names, cex = 0.8)
+
+    # Painting loci according to their accessibility
+    if (opt$accessibility != "not_displayed"){
+        # kpAddLabels(
+        #     karyoplot = kp, 
+        #     labels = "Accessibility", 
+        #     data.panel = "ideogram", 
+        #     cex = 0.8, 
+        #     label.margin = 0.01) # family="Tahoma")
+        kpPlotRegions(
+            karyoplot = kp, 
+            data = accessibility, 
+            col = accessibility$itemRgb, 
+            data.panel = "ideogram")
+    }
+
+    # Adding the scale along each chromosome 
+    kpAddBaseNumbers(
+        karyoplot = kp, 
+        tick.dist = 10000000, 
+        tick.len = 3, 
+        tick.col = "black", # family="Tahoma" 
+        cex = 0.5
+    )
+
+    # Background
+    kpDataBackground(kp, data.panel = 1, col="grey96")
+
+    # Area
+    # kpAddLabels(kp, labels="Number of\ninsertions\nalong the\ngenome", data.panel=1, r0=0, r1=1, cex = 0.8, family="Tahoma")
+    columns <- paste0(classes_order, "_count")
+    overall_max <- max(data[, columns])
+    for (i in 1:length(columns)){
+      if (columns[i] == paste0(cls, "_count")) {
+        kpArea(kp, chr=data$chrom, x=data$barycenter, y=data[[columns[i]]]/overall_max, col=colors_order[i], border="NA", r0=0, r1=1)
+      }
+    }    
+
+    # Add the plot's scale
+    kpAxis(
+        karyoplot = kp, 
+        data.panel = 1, 
+        ymin = 0, 
+        ymax = overall_max, 
+        r0 = 0, 
+        r1 = 1, 
+        side = "right", 
+        numticks = 5,
+        cex = 0.7
+    )
+
+    # Legend
+    twidth  <- max(strwidth(classes_order, units="user"))
+
+    legend(
+      x       = 0.82,
+      y       = 1,
+      legend  = classes_order,
+      fill    = colors_order,
+      border  = "grey5",
+      bty     = "o",
+      box.lwd = 0.3,
+      title   = "Repeat class",
+      cex     = 0.8,
+      text.width = twidth,
+      xpd = TRUE
+    )
+
+    if (opt$accessibility != "not_displayed"){
+        legend(
+        x       = 0.82,
+        y       = -0.25,
+        legend  = c("Low", "High"),
+        fill    = c("grey5", "grey95"),
+        border  = "grey5", #NA
+        bty     = "o",
+        box.lwd = 0.3,
+        title   = "Accessibility",
+        cex     = 0.8,
+        text.width = twidth,
+        xpd = TRUE
+        )
+    }
+
+    # Title
+    title(paste0("Number of insertions of ", cls, " along chromosomes - ", name), cex.main = 0.8, line = 2.5)
+
+  }
+}

@@ -1,0 +1,12 @@
+red	207	32	46	#cf202e	SINE
+dark_grey	35	33	33	#232121	unknown,Undetermined,Unknown
+light_grey	226	226	226	#e2e2e2	Overlapping_annotations
+orange	247	136	34	#f78822	LINE
+yellow	246	219	53	#f6db35	LTR
+chartreuse	168	198	58	#a8c63a	MITE
+green	109	192	103	#6dc067	available
+teal	47	167	160	#2fa7a0	DNA
+blue	65	133	190	#4185be	available
+navy	30	58	95	#1e3a5f	available
+purple	143	73	156	#8f499c	Low_complexity
+pink	212	85	146	#d45592	Simple_repeat

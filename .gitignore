@@ -190,3 +190,4 @@ data/.DS_Store
 data/RepeatMasker/ngousso_chr.fasta.out
 .DS_Store
 data/EDTA/*
+data/genomes/Ngousso/ngousso_chr_windows10kb_Dispensable.fasta.kimura
