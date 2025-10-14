@@ -47,10 +47,21 @@ def parse_repeatmasker_kimura(repeatmasker_kimura_file):
             if (not fields[0].isdigit()) and (fields[0] not in ["Jukes/Cantor", "=================================================================", "File:", "Weighted", "Class", "-----", "Coverage", "Div"]):
                 if fields[4] == "----":
                     fields[4] = 0
-                kimura_div[fields[1]] = float(fields[4])
+                value = float(fields[4])
+                if value < 10:
+                    cat = "0-10"
+                elif value < 20:
+                    cat = "10-20"
+                elif value < 30:
+                    cat = "20-30"
+                elif value < 40:
+                    cat = "30-40"
+                else:
+                    cat = "40-70"
+                kimura_div[fields[1]] = {"pct_div":value, "category":cat}
     return(kimura_div)
 
-def parse_repeatmasker_output(repeatmasker_file, windows_dict):
+def parse_repeatmasker_output(repeatmasker_file, windows_dict, kimura_dict = None):
     print("# Running parse_repeatmasker_output function\n")
     
     ## Retrieve all types of repeats in repeatmasker output file
@@ -82,7 +93,7 @@ def parse_repeatmasker_output(repeatmasker_file, windows_dict):
                 repeats[rep_class][rep_family] += 1
    
     ## Retrieve all insertions
-    # Initialize insertions dict, following the chromosomes and affiliated windows
+    # Initialise insertions dict, by chromosomes and affiliated windows
     insertions = {}
     for chrom in windows_dict:
         insertions[chrom] = {}
@@ -93,6 +104,21 @@ def parse_repeatmasker_output(repeatmasker_file, windows_dict):
                 for rep_family in repeats[rep_class]:
                     insertions[chrom][window][rep_class][rep_family] = {"count":0, "length":0}
             insertions[chrom][window]["Overlapping_annotations"] = {"NA": {"count":0, "length":0}} 
+
+    # Initialise kimura_div dict, by chromosomes and affiliated windows
+    if kimura_dict != None:
+        kimura_div = {}
+        for chrom in windows_dict:
+            kimura_div[chrom] = {}
+            for window in windows_dict[chrom]:
+                kimura_div[chrom][window] = {}
+                for rep_class in repeats:
+                    kimura_div[chrom][window][rep_class] = {"0-10":0, 
+                                                            "10-20":0, 
+                                                            "20-30":0, 
+                                                            "30-40":0, 
+                                                            "40-70":0} 
+
     # Fill insertions dict chromosome per chromosome to limit memory usage
     for chromosome in insertions:
         # print(chromosome)
@@ -126,7 +152,8 @@ def parse_repeatmasker_output(repeatmasker_file, windows_dict):
                             "start":int(start), 
                             "end":int(end), 
                             "rep_class":rep_class, 
-                            "rep_family":rep_family}
+                            "rep_family":rep_family,
+                            "rep_element":fields[9]}
                         counter += 1
         # Update insertions dict
         for window in insertions[chromosome]:
@@ -141,7 +168,8 @@ def parse_repeatmasker_output(repeatmasker_file, windows_dict):
                         "start":min_bp_to_consider, 
                         "end":max_bp_to_consider, 
                         "rep_class":tmp_insertions[tmp]["rep_class"], 
-                        "rep_family":tmp_insertions[tmp]["rep_family"]
+                        "rep_family":tmp_insertions[tmp]["rep_family"],
+                        "rep_element":tmp_insertions[tmp]["rep_element"]
                     }
 
             # Detect overlapping annotations to avoid length/percentages > 100%
@@ -159,6 +187,8 @@ def parse_repeatmasker_output(repeatmasker_file, windows_dict):
                         if entry["id"] not in visited:
                             insertions[chromosome][window][entry['rep_class']][entry['rep_family']]["count"] += 1 
                             visited.append(entry["id"])
+                            if (kimura_dict != None) and (entry['rep_element'] in kimura_dict):
+                                kimura_div[chromosome][window][entry['rep_class']][kimura_dict[entry['rep_element']]['category']] += 1
                         insertions[chromosome][window][entry['rep_class']][entry['rep_family']]["length"] += len_bp_to_consider
                 elif data['count'] >= 2:
                     rep_class_comp, rep_family_comp = [], []
@@ -172,13 +202,21 @@ def parse_repeatmasker_output(repeatmasker_file, windows_dict):
                     if (len(rep_class_comp) == 1) and (len(rep_family_comp) == 1):
                         # Same rep_class and rep_family
                         insertions[chromosome][window][rep_class_comp[0]][rep_family_comp[0]]["count"] += 1 
+                        if (kimura_dict != None) and (entry['rep_element'] in kimura_dict):
+                            kimura_div[chromosome][window][entry['rep_class']][kimura_dict[entry['rep_element']]['category']] += 1
                         insertions[chromosome][window][rep_class_comp[0]][rep_family_comp[0]]["length"] += len_bp_to_consider
                     else:
                         # Different rep_class and/or rep_family
                         insertions[chromosome][window]["Overlapping_annotations"]["NA"]["count"] += 1 
+                        if (kimura_dict != None) and (entry['rep_element'] in kimura_dict):
+                            kimura_div[chromosome][window][entry['rep_class']][kimura_dict[entry['rep_element']]['category']] += 1
                         insertions[chromosome][window]["Overlapping_annotations"]["NA"]["length"] += len_bp_to_consider
 
-    return(repeats, insertions)                    
+    if kimura_dict != None:
+        # print(kimura_div)
+        return(repeats, insertions, kimura_div)
+    else:
+        return(repeats, insertions)                    
 
 def parse_edta_output(edta_file, windows_dict):
     print("# Running parse_edta_output function\n")
@@ -335,7 +373,8 @@ def detect_overlapping_annotations(window_insertions_dict):
             segment_data["entries"].append({
                 "id": ov.data,
                 "rep_class": info["rep_class"],
-                "rep_family": info["rep_family"]
+                "rep_family": info["rep_family"],
+                "rep_element":info["rep_element"]
             })
 
         segments[key] = segment_data
@@ -519,7 +558,7 @@ def plot_family_insertions(name, insertions, chrom_names, agg_global, class_orde
         legend_handles = [mpatches.Patch(color=class_colors_hex[cls], label=cls)
                           for cls in class_order]
         ax.legend(handles=legend_handles, title='Repeat class',
-                loc = "lower right", ncol=1, fontsize='small') # loc='upper left', bbox_to_anchor=(1.05,1)
+                loc = "best", ncol=1, fontsize='small') # loc='upper left', bbox_to_anchor=(1.05,1)
         plt.tight_layout()
         fig.savefig(f'{fname}',bbox_inches='tight')
         plt.close(fig)
@@ -617,13 +656,132 @@ def export_window_class_bed(name, window_size, insertions, windows, class_colors
     reversed_colors = ",".join(list(reversed(tmp_colors)))
     return(reversed_classes, reversed_colors)
 
-def plot_karyoplots(name, window_size, genome_file, chromosomes, accessibility, classes, colors, plot_per_class):
+def export_window_kimura_bed(name, window_size, kimura_div, windows, class_order):
+    """
+    """
+    print("# Running export_window_kimura_bed function\n")
+
+    # os.makedirs('analyses/karyoplot_tables', exist_ok = True)
+
+    output_bed = f'analyses/karyoplot_tables/{name}_{window_size}_kimura.bed'
+
+    # TO DO 
+    # if (os.path.isfile(output_bed)) and (os.stat(output_bed).st_size != 0):
+    #     print(f'{output_bed} already exists and isn’t empty. To force recalculation, please delete it first.')
+
+    kimura_cats = ["0-10", "10-20", "20-30", "30-40", "40-70"]
+
+    # Build rows
+    rows = []
+    for chrom, win_list in windows.items():
+        for win_label in win_list:
+            parts = win_label.split('-')
+            if len(parts) != 3:
+                continue
+            _, start_s, end_s = parts
+            start = int(start_s) - 1
+            end = int(end_s)
+            window_len = end - start
+            window_karyoplotr = int(start + (window_len/2))
+            row = {'chrom': chrom, 'start': start, 'end': end, 'barycenter': window_karyoplotr}
+            alls = []
+            for category in kimura_cats:
+                alls.append(f"ALL_{category}_pct")
+                row[f"ALL_{category}_count"] = 0 
+                row[f"ALL_{category}_pct"] = 0 
+
+            ### Per class
+            # not_to_plot = []
+            for cls in class_order:
+                cats = kimura_div.get(chrom, {}).get(win_label, {}).get(cls, {})
+                if len(cats) > 0:
+                    cnt_sum = sum(m for m in cats.values())
+                    for category in kimura_cats:
+                        row[f'{cls}_{category}_count'] = cats[category]
+                        row[f"ALL_{category}_count"] += cats[category] # Prepare all classes
+                        if cnt_sum != 0:
+                            row[f'{cls}_{category}_pct'] = round(cats[category] / cnt_sum, 4)
+                        else: 
+                            row[f'{cls}_{category}_pct'] = 0
+                else:
+                    # not_to_plot.append(cls)
+                    for category in kimura_cats:
+                        row[f'{cls}_{category}_count'] = 0
+                        row[f'{cls}_{category}_pct'] = 0
+
+            ### All classes
+            cnt_sum = 0
+            for category in kimura_cats:
+                cnt_sum += row[f"ALL_{category}_count"]
+            for category in kimura_cats:
+                if cnt_sum != 0:
+                    row[f"ALL_{category}_pct"] = round(row[f"ALL_{category}_count"] / cnt_sum, 4)
+                else: 
+                    row[f'ALL_{category}_pct'] = 0
+                
+            rows.append(row)
+
+    df = pd.DataFrame(rows)
+    
+    # Compute stacked percentages for ALL
+    stacked = df[alls].cumsum(axis=1)
+    stacked.columns = [f'ALL_{category}_pct_stacked' for category in kimura_cats]
+    df = pd.concat([df, stacked], axis=1)
+
+    # Compute stacked percentages per class
+    # for cls in class_order:
+    #     if cls not in not_to_plot:
+    #         to_stack = []
+    #         for category in kimura_cats:
+    #             to_stack.append(f"{cls}_{category}_pct")
+    #         stacked = df[to_stack].cumsum(axis=1)
+    #         stacked.columns = [f'{cls}_{category}_pct_stacked' for category in kimura_cats]
+    #         df = pd.concat([df, stacked], axis=1)
+    for cls in class_order:
+        to_stack = []
+        for category in kimura_cats:
+            to_stack.append(f"{cls}_{category}_pct")
+        stacked = df[to_stack].cumsum(axis=1)
+        stacked.columns = [f'{cls}_{category}_pct_stacked' for category in kimura_cats]
+        df = pd.concat([df, stacked], axis=1)
+
+    # Build final column order: chrom, start, end, then per class:
+    cols = ['chrom', 'start', 'end', 'barycenter']
+    for category in kimura_cats:
+        cols.append(f'ALL_{category}_count')
+        cols.append(f'ALL_{category}_pct')
+        cols.append(f'ALL_{category}_pct_stacked')
+        df[f'ALL_{category}_pct_stacked'] = df[f'ALL_{category}_pct_stacked'].clip(upper=1)
+    # for cls in class_order:
+    #     if cls not in not_to_plot:
+    #         for category in kimura_cats:
+    #             cols.append(f'{cls}_{category}_count')
+    #             cols.append(f'{cls}_{category}_pct')
+    #             cols.append(f'{cls}_{category}_pct_stacked')
+    #             df[f'{cls}_{category}_pct_stacked'] = df[f'{cls}_{category}_pct_stacked'].clip(upper=1)
+    for cls in class_order:
+        for category in kimura_cats:
+            cols.append(f'{cls}_{category}_count')
+            cols.append(f'{cls}_{category}_pct')
+            cols.append(f'{cls}_{category}_pct_stacked')
+            df[f'{cls}_{category}_pct_stacked'] = df[f'{cls}_{category}_pct_stacked'].clip(upper=1)
+
+    df = df[cols]
+    df.to_csv(output_bed, sep='\t', index=False)
+
+    return(output_bed)
+
+def plot_karyoplots(name, window_size, genome_file, chromosomes, accessibility, classes, colors, plot_per_class, kimura_bed = None):
     """
     """
     print("# Running plot_karyoplots function\n")
 
     # Percentage and counts - Horizontal version
-    cmd = f'Rscript scripts/plot_chromosomes.R --name {name} --genome {genome_file} --chromosome {chromosomes} --accessibility {accessibility} --input analyses/karyoplot_tables/{name}_{window_size}_repeat_classes.bed --classesorder {classes} --perclass {plot_per_class} --colorsorder {colors} --output analyses/{name}_{window_size}'
+    # cmd = f'Rscript scripts/plot_chromosomes.R --name {name} --genome {genome_file} --chromosome {chromosomes} --accessibility {accessibility} --input analyses/karyoplot_tables/{name}_{window_size}_repeat_classes.bed --classesorder {classes} --perclass {plot_per_class} --colorsorder {colors} --output analyses/{name}_{window_size} --kimura {kimura_bed}'
+    # print(cmd)
+    # subprocess.run(cmd.split(" "), check=True)
+
+    cmd = f'Rscript scripts/plot_chromosomes_kimura.R --name {name} --genome {genome_file} --chromosome {chromosomes} --accessibility {accessibility} --input analyses/karyoplot_tables/{name}_{window_size}_repeat_classes.bed --classesorder {classes} --perclass {plot_per_class} --colorsorder {colors} --output analyses/{name}_{window_size} --kimura {kimura_bed}'
     print(cmd)
     subprocess.run(cmd.split(" "), check=True)
 
@@ -674,8 +832,11 @@ if __name__ == "__main__":
         sys.exit()
     print(f"Input file ({file_type}): {file}")
 
-    if args.kimura != None:
+    if args.kimura == None:
+        kimura_file = None
+    else:
         kimura_file = args.kimura 
+    print(f"Additional Kimura features: {kimura_file}")
 
     window_size = args.windowsize
     print(f"Window size: {window_size}")
@@ -691,7 +852,6 @@ if __name__ == "__main__":
     else:
         classes_order = None
     print(f"Classes order: {classes_order}")
-    # For now, please don't remove any class, stacked plots won't be trustworthy 
 
     if args.accessibility != None:
         accessibility = args.accessibility 
@@ -739,14 +899,21 @@ if __name__ == "__main__":
     # Detect repeat types and actual insertions
 
     if args.repeatmasker != None:
-        repeats, insertions = parse_repeatmasker_output(
-            repeatmasker_file = file,
-            windows_dict = windows
-        )
-        if args.kimura != None:
+        if kimura_file != None:
             kimura_dict = parse_repeatmasker_kimura(
                 repeatmasker_kimura_file = kimura_file
             )
+            repeats, insertions, kimura_div = parse_repeatmasker_output(
+                repeatmasker_file = file,
+                windows_dict = windows, 
+                kimura_dict = kimura_dict
+            )
+        else:
+            repeats, insertions = parse_repeatmasker_output(
+                repeatmasker_file = file,
+                windows_dict = windows
+            )
+        
     elif args.edta != None:
         repeats, insertions = parse_edta_output(
             edta_file = file,
@@ -783,6 +950,17 @@ if __name__ == "__main__":
         class_order = class_order
         ) 
     
+    if kimura_file != None:
+        kimura_bed = export_window_kimura_bed(
+            name = name, 
+            window_size = window_size, 
+            kimura_div = kimura_div, 
+            windows = windows, 
+            class_order = class_order
+            )
+    else:
+        kimura_bed = None
+    
     plot_karyoplots(
         name = name, 
         window_size = window_size,
@@ -791,7 +969,8 @@ if __name__ == "__main__":
         accessibility = accessibility, 
         classes = reversed_classes, 
         colors = reversed_colors,
-        plot_per_class = per_class
+        plot_per_class = per_class,
+        kimura_bed = kimura_bed
     )
 
 
