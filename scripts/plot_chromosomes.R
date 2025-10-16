@@ -19,7 +19,8 @@ option_list = list(
   make_option(c("-k", "--classesorder"), type="character", default=NULL, help="classes order, should be reversed for display purposes, use comma", metavar="character"), 
   make_option(c("-p", "--perclass"), type="character", default=NULL, help="plot additional karyoplots", metavar="character"), 
   make_option(c("-l", "--colorsorder"), type="character", default=NULL, help="colors order, should be reversed for display purposes, use comma", metavar="character"), 
-  make_option(c("-o", "--output"), type="character", default=NULL, help="output prefix file name [default= %default]", metavar="character")
+  make_option(c("-o", "--output"), type="character", default=NULL, help="output prefix file name [default= %default]", metavar="character"),
+  make_option(c("-m", "--kimura"), type="character", default=NULL, help="Additional panel [RepeatMasker only}", metavar="character")
 ); 
  
 opt_parser = OptionParser(option_list=option_list);
@@ -53,6 +54,17 @@ if (is.null(opt$output)){
   stop("Missing argument: -o <output prefix>", call.=FALSE)
 }
 
+if (! is.null(opt$perclass)){
+  if (is.character(opt$perclass) && opt$perclass %in% c("False", "None")){
+    opt$perclass <- NULL
+  }
+}
+
+if (! is.null(opt$kimura)){
+  if (is.character(opt$kimura) && opt$kimura %in% c("False", "None")){
+    opt$perclass <- NULL
+  }
+}
 
 cat("\n### CODE ###\n\n")
 
@@ -194,6 +206,129 @@ if (opt$accessibility != "not_displayed"){
 title(paste0("Percentage of repeated content along chromosomes - ", name), cex.main = 0.8, line = 2.5)
 
 dev.off()
+
+
+
+
+
+# if (!is.null(opt$kimura)){
+
+#   file <- paste0(opt$output, "_karyoplot_kimura_by_class.png")
+#   png(file, width = 29.7, height = 4, units = "cm", res = 300)
+
+#   # Graphical parameters 
+#   pp <- getDefaultPlotParams(plot.type=4)
+#   pp$data1inmargin <- 14 
+#   # pp$leftmargin <- 0.085
+#   pp$topmargin <- 50
+#   pp$leftmargin <- 0.02
+#   pp$rightmargin <- 0.24
+#   pp$ideogramlateralmargin <- 0.01
+#   pp$data2inmargin <- 10
+
+#   # Plotting the outline of each chromosome
+#   kp <- plotKaryotype(
+#       genome = genome, 
+#       # cytobands = genome, 
+#       chromosomes = chromosome_order, 
+#       plot.type = 4, 
+#       plot.params = pp,
+#       labels.plotter = NULL
+#   )
+#   kpAddChromosomeNames(kp, chr.names = ordered_names, cex = 0.8)
+
+#   # # Painting loci according to their accessibility
+#   # if (opt$accessibility != "not_displayed"){
+#   #     # kpAddLabels(
+#   #     #     karyoplot = kp, 
+#   #     #     labels = "Accessibility", 
+#   #     #     data.panel = "ideogram", 
+#   #     #     cex = 0.8, 
+#   #     #     label.margin = 0.01) # family="Tahoma")
+#   #     kpPlotRegions(
+#   #         karyoplot = kp, 
+#   #         data = accessibility, 
+#   #         col = accessibility$itemRgb, 
+#   #         data.panel = "ideogram")
+#   # }
+
+# #   # Adding the scale along each chromosome 
+# #   kpAddBaseNumbers(
+# #       karyoplot = kp, 
+# #       tick.dist = 10000000, 
+# #       tick.len = 3, 
+# #       tick.col = "black", # family="Tahoma" 
+# #       cex = 0.5
+# #   )
+
+# #   # Background
+# #   kpDataBackground(kp, data.panel = 1, col="grey96")
+
+
+# #   # Area
+# #   # kpAddLabels(kp, labels="Percentage\nof repeated\ncontent along\nthe genome", data.panel=1, r0=0, r1=1, cex = 0.8, family="Tahoma")
+# #   kimura_cats <- c("40-70", "30-40", "20-30", "10-20", "0-10")
+# #   kimura_colors <- c("#2c699a", "#0db39e", "#83e377", "#efea5a", "#f29e4c")
+# #   columns <- paste0("ALL_", kimura_cats, "_pct_stacked")
+# #   for (i in 1:length(columns)){
+# #       kpArea(kp, chr=data$chrom, x=data$barycenter, y=data[[columns[i]]], col=kimura_colors[i], border="NA", r0=0, r1=1)
+# #   }    
+
+# #   # Add the plot's scale
+# #   kpAxis(
+# #       karyoplot = kp, 
+# #       data.panel = 1, 
+# #       # ymin = 0, 
+# #       # ymax = 100, 
+# #       r0 = 0, 
+# #       r1 = 1, 
+# #       side = "right", 
+# #       numticks = 5,
+# #       labels = c("0%", "25%", "50%", "75%", "100%"), 
+# #       cex = 0.7
+# #   )
+
+# #   # Legend
+# #   twidth  <- max(strwidth(kimura_cats, units="user"))
+
+# #   legend(
+# #     x       = 0.82,
+# #     y       = 1,
+# #     legend  = kimura_cats,
+# #     fill    = kimura_colors,
+# #     border  = "grey5",
+# #     bty     = "o",
+# #     box.lwd = 0.3,
+# #     title   = "Repeat class",
+# #     cex     = 0.8,
+# #     text.width = twidth,
+# #     xpd = TRUE
+# #   )
+
+# #   # if (is.character(opt$accessibility)){
+# #   if (opt$accessibility != "not_displayed"){
+# #       legend(
+# #       x       = 0.82,
+# #       y       = -0.25,
+# #       legend  = c("Low", "High"),
+# #       fill    = c("grey5", "grey95"),
+# #       border  = "grey5", #NA
+# #       bty     = "o",
+# #       box.lwd = 0.3,
+# #       title   = "Accessibility",
+# #       cex     = 0.8,
+# #       text.width = twidth,
+# #       xpd = TRUE
+# #       )
+# #   }
+
+# #   # Title
+# #   title(paste0("Percentage of repeated content along chromosomes - ", name), cex.main = 0.8, line = 2.5)
+
+#   dev.off()
+# }
+
+
 
 
 ##### Per class
