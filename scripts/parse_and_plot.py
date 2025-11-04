@@ -79,7 +79,7 @@ def parse_repeatmasker_output(repeatmasker_file, windows_dict, kimura_dict = Non
                 classification = fields[10].split("/")
                 rep_class = classification[0]
                 if len(classification) == 1:
-                    rep_family = "NA"                    
+                    rep_family = "NA"
                 else:
                     if classification[1] == "":
                         rep_family = "NA"
@@ -103,7 +103,7 @@ def parse_repeatmasker_output(repeatmasker_file, windows_dict, kimura_dict = Non
                 insertions[chrom][window][rep_class] = {}
                 for rep_family in repeats[rep_class]:
                     insertions[chrom][window][rep_class][rep_family] = {"count":0, "length":0}
-            insertions[chrom][window]["Overlapping_annotations"] = {"NA": {"count":0, "length":0}} 
+            insertions[chrom][window]["Ambiguous"] = {"NA": {"count":0, "length":0}} 
 
     # Initialise kimura_div dict, by chromosomes and affiliated windows
     if kimura_dict != None:
@@ -207,10 +207,10 @@ def parse_repeatmasker_output(repeatmasker_file, windows_dict, kimura_dict = Non
                         insertions[chromosome][window][rep_class_comp[0]][rep_family_comp[0]]["length"] += len_bp_to_consider
                     else:
                         # Different rep_class and/or rep_family
-                        insertions[chromosome][window]["Overlapping_annotations"]["NA"]["count"] += 1 
+                        insertions[chromosome][window]["Ambiguous"]["NA"]["count"] += 1 
                         if (kimura_dict != None) and (entry['rep_element'] in kimura_dict):
                             kimura_div[chromosome][window][entry['rep_class']][kimura_dict[entry['rep_element']]['category']] += 1
-                        insertions[chromosome][window]["Overlapping_annotations"]["NA"]["length"] += len_bp_to_consider
+                        insertions[chromosome][window]["Ambiguous"]["NA"]["length"] += len_bp_to_consider
 
     if kimura_dict != None:
         # print(kimura_div)
@@ -253,7 +253,7 @@ def parse_edta_output(edta_file, windows_dict):
                 insertions[chrom][window][rep_class] = {}
                 for rep_family in repeats[rep_class]:
                     insertions[chrom][window][rep_class][rep_family] = {"count":0, "length":0}
-            insertions[chrom][window]["Overlapping_annotations"] = {"NA": {"count":0, "length":0}} # Can be refined later (DNA_LTR, DNA_DNA, ...).
+            insertions[chrom][window]["Ambiguous"] = {"NA": {"count":0, "length":0}} # Can be refined later (DNA_LTR, DNA_DNA, ...).
     # Fill insertions dict chromosome per chromosome to limit memory usage
     for chromosome in insertions:
         # print(chromosome)
@@ -328,8 +328,8 @@ def parse_edta_output(edta_file, windows_dict):
                         insertions[chromosome][window][rep_class_comp[0]][rep_family_comp[0]]["length"] += len_bp_to_consider
                     else:
                         # Different rep_class and/or rep_family
-                        insertions[chromosome][window]["Overlapping_annotations"]["NA"]["count"] += 1 
-                        insertions[chromosome][window]["Overlapping_annotations"]["NA"]["length"] += len_bp_to_consider
+                        insertions[chromosome][window]["Ambiguous"]["NA"]["count"] += 1 
+                        insertions[chromosome][window]["Ambiguous"]["NA"]["length"] += len_bp_to_consider
 
     return(repeats, insertions)
 
@@ -512,7 +512,7 @@ def plot_family_insertions(name, insertions, chrom_names, agg_global, class_orde
                 val=int(agg_df.loc[mask,metric].values[0])
                 ax.bar(i,val,bottom=bottom,width=0.4,color=rgba,edgecolor="white",linewidth=0.3)
                 bottom+=val; total+=val
-            ax.text(i,total,f"{total:_}".replace("_", " "),ha='center',va='bottom') 
+            ax.text(i,total,f"{total:_}".replace("_", ","),ha='center',va='bottom') 
         # legend
         handles=[]
         for cls in class_order:
@@ -520,8 +520,8 @@ def plot_family_insertions(name, insertions, chrom_names, agg_global, class_orde
                 rgba=fam_colors[cls][fam]
                 mask=(agg_df['rep_class']==cls)&(agg_df['rep_family']==fam)
                 val=int(agg_df.loc[mask,metric].values[0]) if mask.any() else 0
-                val_to_print = f"{val:_}".replace("_", " ")
-                handles.append(mpatches.Patch(color=rgba,label=f"{fam} ({val_to_print})")) 
+                val_to_print = f"{val:_}".replace("_", ",")
+                handles.append(mpatches.Patch(color=rgba,label=f"{cls} - {fam} ({val_to_print})")) 
         ax.set_xticks(x); ax.set_xticklabels(xt,rotation=0)
         ax.set_xlabel('Repeat class',weight='bold',labelpad=12)
         ax.set_ylabel(ylabel,weight='bold',labelpad=12)
@@ -539,14 +539,14 @@ def plot_family_insertions(name, insertions, chrom_names, agg_global, class_orde
                 mask=(agg_df['rep_class']==cls)&(agg_df['rep_family']==fam)
                 if not mask.any(): continue
                 val=int(agg_df.loc[mask,metric].values[0])
-                families.append(fam)
+                families.append(f"{cls} - {fam}")
                 values.append(val)
                 colors.append(rgba)
         y = np.arange(len(families))
         ax.barh(y, values, color=colors, height=0.6)
         # Annotate each bar with spacing and non-bold
         for yi, val in zip(y, values):
-            ax.text(val + max(values)*0.01, yi, f"{val:_}".replace("_", " "), va='center', ha='left')
+            ax.text(val + max(values)*0.01, yi, f"{val:_}".replace("_", ","), va='center', ha='left')
         ax.set_yticks(y); ax.set_yticklabels(families) # ,fontsize=8
         ax.invert_yaxis()
         # Extend x-axis limit to include labels
@@ -564,10 +564,10 @@ def plot_family_insertions(name, insertions, chrom_names, agg_global, class_orde
         plt.close(fig)
 
     # Generate plots if not already existing 
-    _plot_stacked(agg_global,'count', 'Insertion count', f'Stacked Counts - Whole Genome - {name}', f'analyses/{name}_whole_genome_stacked_counts_by_class.png', width=width, height=height)
-    _plot_stacked(agg_global,'length', 'Base pair span', f'Stacked Lengths - Whole Genome - {name}', f'analyses/{name}_whole_genome_stacked_lengths_by_class.png', width=width, height=height)
-    _plot_contiguous(agg_global,'count', 'Insertion count', f'Counts by Type - Whole Genome - {name}', f'analyses/{name}_whole_genome_contiguous_counts_by_class.png', width=width, height=height)
-    _plot_contiguous(agg_global,'length', 'Base pair span', f'Lengths by Type - Whole Genome - {name}', f'analyses/{name}_whole_genome_contiguous_lengths_by_class.png', width=width, height=height)
+    _plot_stacked(agg_global,'count', 'Insertion count', f'Stacked Counts - Whole Genome - {name}', f'analyses/{name}_whole_genome_stacked_counts_by_class.pdf', width=width, height=height)
+    _plot_stacked(agg_global,'length', 'Base pair span', f'Stacked Lengths - Whole Genome - {name}', f'analyses/{name}_whole_genome_stacked_lengths_by_class.pdf', width=width, height=height)
+    _plot_contiguous(agg_global,'count', 'Insertion count', f'Counts by Type - Whole Genome - {name}', f'analyses/{name}_whole_genome_contiguous_counts_by_class.pdf', width=width, height=height)
+    _plot_contiguous(agg_global,'length', 'Base pair span', f'Lengths by Type - Whole Genome - {name}', f'analyses/{name}_whole_genome_contiguous_lengths_by_class.pdf', width=width, height=height)
 
     if per_chromosome:
         for chrom, windows in insertions.items():
@@ -579,10 +579,10 @@ def plot_family_insertions(name, insertions, chrom_names, agg_global, class_orde
             df_chr=pd.DataFrame(rec)
             if df_chr.empty: continue
             agg_chr=df_chr.groupby(['rep_class','rep_family'])[['count','length']].sum().reset_index()
-            _plot_stacked(agg_chr,'count','Insertion count', f'Stacked Counts in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}_{chrom_names[chrom]}_stacked_counts_by_class.png', width=width, height=height)
-            _plot_stacked(agg_chr,'length','Base pair span', f'Stacked Lengths in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}_{chrom_names[chrom]}_stacked_lengths_by_class.png', width=width, height=height)
-            _plot_contiguous(agg_chr,'count','Insertion count', f'Counts by Type in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}_{chrom_names[chrom]}_contiguous_counts_by_class.png', width=width, height=height)
-            _plot_contiguous(agg_chr,'length','Base pair span', f'Lengths by Type in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}_{chrom_names[chrom]}_contiguous_lengths_by_class.png', width=width, height=height)
+            _plot_stacked(agg_chr,'count','Insertion count', f'Stacked Counts in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}_{chrom_names[chrom]}_stacked_counts_by_class.pdf', width=width, height=height)
+            _plot_stacked(agg_chr,'length','Base pair span', f'Stacked Lengths in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}_{chrom_names[chrom]}_stacked_lengths_by_class.pdf', width=width, height=height)
+            _plot_contiguous(agg_chr,'count','Insertion count', f'Counts by Type in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}_{chrom_names[chrom]}_contiguous_counts_by_class.pdf', width=width, height=height)
+            _plot_contiguous(agg_chr,'length','Base pair span', f'Lengths by Type in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}_{chrom_names[chrom]}_contiguous_lengths_by_class.pdf', width=width, height=height)
     
     # return(class_order, class_colors_hex, fam_colors)
 

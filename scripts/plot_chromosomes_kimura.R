@@ -103,8 +103,8 @@
 
 # ##### All classes
 
-# file <- paste0(opt$output, "_karyoplot_stacked_percentage_by_class.png")
-# png(file, width = 29.7, height = 10, units = "cm", res = 300)
+# file <- paste0(opt$output, "_karyoplot_stacked_percentage_by_class.pdf")
+# # png(file, width = 29.7, height = 10, units = "cm", res = 300)
 
 # # Graphical parameters 
 # pp <- getDefaultPlotParams(plot.type=3)
@@ -253,8 +253,8 @@
 # if (!is.null(opt$perclass)){
 #   for (cls in classes_order) {
 
-#     file <- paste0(opt$output, "_karyoplot_percentage_", cls, ".png")
-#     png(file, width = 29.7, height = 10, units = "cm", res = 300)
+#     file <- paste0(opt$output, "_karyoplot_percentage_", cls, ".pdf")
+#     # png(file, width = 29.7, height = 10, units = "cm", res = 300)
 
 #     # Graphical parameters 
 #     pp <- getDefaultPlotParams(plot.type=3)
@@ -407,8 +407,8 @@
 
 # ##### All classes
 
-# file <- paste0(opt$output, "_karyoplot_stacked_counts_by_class.png")
-# png(file, width = 29.7, height = 10, units = "cm", res = 300)
+# file <- paste0(opt$output, "_karyoplot_stacked_counts_by_class.pdf")
+# # png(file, width = 29.7, height = 10, units = "cm", res = 300)
 
 # # Graphical parameters 
 # pp <- getDefaultPlotParams(plot.type=3)
@@ -552,8 +552,8 @@
 
 # if (!is.null(opt$perclass)){
 #   for (cls in classes_order) {
-#     file <- paste0(opt$output, "_karyoplot_counts_", cls, ".png")
-#     png(file, width = 29.7, height = 10, units = "cm", res = 300)
+#     file <- paste0(opt$output, "_karyoplot_counts_", cls, ".pdf")
+#     # png(file, width = 29.7, height = 10, units = "cm", res = 300)
 
 #     # Graphical parameters 
 #     pp <- getDefaultPlotParams(plot.type=3)
@@ -791,7 +791,7 @@ make_pp <- function() {
   pp <- getDefaultPlotParams(plot.type = 3)
   pp$data1inmargin <- 14
   pp$topmargin <- 100
-  pp$leftmargin <- 0.02
+  pp$leftmargin <- 0.04
   pp$rightmargin <- 0.24
   pp$ideogramlateralmargin <- 0.01
   pp$data2inmargin <- 20
@@ -806,7 +806,8 @@ plot_karyo_base <- function() {
     chromosomes  = chromosome_order,
     plot.type    = 3,
     plot.params  = pp,
-    labels.plotter = NULL
+    labels.plotter = NULL,
+    cytobands = genome
   )
   kpAddChromosomeNames(kp, chr.names = ordered_names, cex = 0.8)
 
@@ -818,8 +819,12 @@ plot_karyo_base <- function() {
   kpAddBaseNumbers(karyoplot = kp, tick.dist = 10000000, tick.len = 3,
                    tick.col = "black", cex = 0.5)
 
-  kpDataBackground(kp, data.panel = 1, col = "grey96")
-  kpDataBackground(kp, data.panel = 2, col = "grey96")
+  # kpDataBackground(kp, data.panel = 1, col = "grey98")  
+  # kpDataBackground(kp, data.panel = 2, col = "grey98")  # , col = "grey96"
+
+  kpAddLabels(kp, labels = "TE", data.panel = 1, cex=0.8)
+  kpAddLabels(kp, labels = "K2p", data.panel = 2, cex=0.8)
+
   kp
 }
 
@@ -857,8 +862,9 @@ add_legends <- function() {
 # =========================================
 
 # ---- All classes (stacked % by class + K2p)
-file <- paste0(opt$output, "_karyoplot_stacked_percentage_by_class.png")
-png(file, width = 29.7, height = 10, units = "cm", res = 300)
+file <- paste0(opt$output, "_karyoplot_stacked_percentage_by_class.pdf")
+# png(file, width = 29.7, height = 10, units = "cm", res = 300)
+pdf(file, width = 11.417, height = 3.937)
 on.exit(dev.off(), add = TRUE)
 
 kp <- plot_karyo_base()
@@ -884,8 +890,9 @@ dev.off()
 # ---- Per class (% + K2p), if requested
 if (!is.null(opt$perclass)) {
   for (cls in classes_order) {
-    file <- paste0(opt$output, "_karyoplot_percentage_", cls, ".png")
-    png(file, width = 29.7, height = 10, units = "cm", res = 300)
+    file <- paste0(opt$output, "_karyoplot_percentage_", cls, ".pdf")
+    # png(file, width = 29.7, height = 10, units = "cm", res = 300)
+    pdf(file, width = 11.417, height = 3.937)
     on.exit(dev.off(), add = TRUE)
 
     kp <- plot_karyo_base()
@@ -922,8 +929,9 @@ if (!is.null(opt$perclass)) {
 # =========================================
 
 # ---- All classes (stacked counts + K2p)
-file <- paste0(opt$output, "_karyoplot_stacked_counts_by_class.png")
-png(file, width = 29.7, height = 10, units = "cm", res = 300)
+file <- paste0(opt$output, "_karyoplot_stacked_counts_by_class.pdf")
+# png(file, width = 29.7, height = 10, units = "cm", res = 300)
+pdf(file, width = 11.417, height = 3.937)
 on.exit(dev.off(), add = TRUE)
 
 kp <- plot_karyo_base()
@@ -948,8 +956,9 @@ dev.off()
 # ---- Per class (counts + K2p), if requested
 if (!is.null(opt$perclass)) {
   for (cls in classes_order) {
-    file <- paste0(opt$output, "_karyoplot_counts_", cls, ".png")
-    png(file, width = 29.7, height = 10, units = "cm", res = 300)
+    file <- paste0(opt$output, "_karyoplot_counts_", cls, ".pdf")
+    # png(file, width = 29.7, height = 10, units = "cm", res = 300)
+    pdf(file, width = 11.417, height = 3.937)
     on.exit(dev.off(), add = TRUE)
 
     kp <- plot_karyo_base()
