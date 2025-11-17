@@ -32,6 +32,19 @@ def define_windows(genome_file, window_size, chrom_to_plot):
         chroms = chrom_to_plot
     return(windows, chroms, chrom_names)
 
+def create_gc_content(fasta_file = None, gc_windows = 10000):
+    print("# Running create_gc_content function\n")
+    
+    if (fasta != None) and (args.accessibility != None):
+        if os.path.isfile(fasta_file):
+            gc_file = f"{fasta[:-6]}_gc_windows_{gc_windows}.tsv"
+            if not os.path.isfile(gc_file):
+                cmd = f"python3 scripts/create_gc_content.py {fasta} --window {gc_windows} --out {gc_file}"
+                subprocess.run(cmd.split(" "), check=True)
+        else:
+            print(f"Warning! Provided .fasta file ({fasta}) doesn't exist -- GC content has not been calculated\n")
+    return(gc_file)
+
 def parse_repeatmasker_kimura(repeatmasker_kimura_file):
     print("# Running parse_repeatmasker_kimura function\n")
 
@@ -172,7 +185,7 @@ def parse_repeatmasker_output(repeatmasker_file, windows_dict, kimura_dict = Non
                         "rep_class":tmp_insertions[tmp]["rep_class"], 
                         "rep_family":tmp_insertions[tmp]["rep_family"],
                         "rep_element":tmp_insertions[tmp]["rep_element"],
-                        "divergence":tmp_insertions[tmp]["divergence"]
+                        "divergence":tmp_insertions[tmp]["rep_element"]
                     }
 
             # Detect overlapping annotations to avoid length/percentages > 100%
@@ -944,6 +957,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--name", required=False, type=str, default="output")
     parser.add_argument("--genome", required=True, type=str)
+    parser.add_argument("--fasta", required=False, type=str, default=None)
     parser.add_argument("--repeatmasker", required=False, type=str, default=None) 
     parser.add_argument("--kimura", required=False, type=str, default=None) 
     parser.add_argument("--edta", required=False, type=str, default=None) 
@@ -965,6 +979,9 @@ if __name__ == "__main__":
 
     genome = args.genome
     print(f"Genome file: {genome}")
+
+    fasta = args.fasta
+    print(f"Provided fasta: {fasta}")
 
     if args.repeatmasker != None:
         file = args.repeatmasker 
@@ -1039,6 +1056,13 @@ if __name__ == "__main__":
         genome_file = genome, 
         window_size = window_size,
         chrom_to_plot = chrom_to_plot
+    )
+
+    # Create GC content
+
+    gc_file = create_gc_content(
+        fasta_file = fasta, 
+        gc_windows = 10000
     )
 
     # Detect repeat types and actual insertions
