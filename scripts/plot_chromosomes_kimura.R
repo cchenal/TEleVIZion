@@ -723,7 +723,9 @@ option_list <- list(
   make_option(c("-o", "--output"), type="character", default=NULL,
               help="output prefix file name [default= %default]", metavar="character"),
   make_option(c("-m", "--kimura"), type="character", default=NULL,
-              help="Additional panel [RepeatMasker only}", metavar="character")
+              help="Additional panel [RepeatMasker only]", metavar="character"),
+  make_option(c("-e", "--edtaidentity"), type="character", default=NULL,
+              help="Additional panel [EDTA only]", metavar="character")
 )
 
 opt_parser <- OptionParser(option_list = option_list)
@@ -753,12 +755,18 @@ if (!is.null(opt$kimura)) {
     opt$kimura <- NULL   # (fixed: previously nulled perclass by mistake)
   }
 }
+if (!is.null(opt$edtaidentity)) {
+  if (is.character(opt$edtaidentity) && opt$edtaidentity %in% c("False", "None")) {
+    opt$edtaidentity <- NULL   # (fixed: previously nulled perclass by mistake)
+  }
+}
 
 cat("\n### CODE ###\n\n")
 
 # ---- Data
 data        <- read.csv(opt$input,  sep = "\t")
 data_kimura <- if (!is.null(opt$kimura)) read.csv(opt$kimura, sep = "\t") else NULL
+data_identity <- if (!is.null(opt$edtaidentity)) read.csv(opt$edtaidentity, sep = "\t") else NULL
 name        <- opt$name
 
 # ---- Genome / chromosomes
@@ -782,6 +790,10 @@ if (!identical(opt$accessibility, "not_displayed")) {
 # ---- Kimura
 kimura_cats   <- c("40-70", "30-40", "20-30", "10-20", "0-10")
 kimura_colors <- c("#2c699a", "#0db39e", "#83e377", "#efea5a", "#f29e4c")
+
+# ---- Identity
+identity_cats   <- c("0.5-0", "0.75-0.5", "0.9-0.75", "1-0.9")
+identity_colors <- c("#0db39e", "#83e377", "#efea5a", "#f29e4c") # "#2c699a", 
 
 # ---------------------------
 # Helpers to avoid repetition
@@ -823,7 +835,13 @@ plot_karyo_base <- function() {
   # kpDataBackground(kp, data.panel = 2, col = "grey98")  # , col = "grey96"
 
   kpAddLabels(kp, labels = "TE", data.panel = 1, cex=0.8)
+  if (!is.null(data_kimura)) {
   kpAddLabels(kp, labels = "K2p", data.panel = 2, cex=0.8)
+  }
+  if (!is.null(data_identity)) {
+    kpAddLabels(kp, labels = "Identity", data.panel = 2, cex=0.8)
+  }
+  
 
   kp
 }
@@ -847,14 +865,30 @@ draw_k2p_panel <- function(kp, dat) {
   add_axis_pct(kp, panel = 2, r0 = 1, r1 = 0, labels = c("0%", "50%", "100%"))
 }
 
+draw_identity_panel <- function(kp, dat) {
+  cols <- paste0("ALL_", gsub("-", ".", identity_cats), "_pct_stacked")
+  for (i in seq_along(cols)) {
+    kpArea(kp, chr = data$chrom, x = data$barycenter, y = dat[[cols[i]]],
+           col = identity_colors[i], border = "NA", r0 = 1, r1 = 0, data.panel = 2)
+  }
+  add_axis_pct(kp, panel = 2, r0 = 1, r1 = 0, labels = c("0%", "50%", "100%"))
+}
+
 add_legends <- function() {
   twidth <- max(strwidth(classes_order, units = "user"))
   legend(x = 0.82, y = 1, legend = classes_order, fill = colors_order,
          border = "grey5", bty = "o", box.lwd = 0.3, title = "Repeat class",
          cex = 0.8, text.width = twidth, xpd = TRUE)
-  legend(x = 0.82, y = 0.1, legend = kimura_cats, fill = kimura_colors,
+  if (!is.null(data_kimura)) {
+    legend(x = 0.82, y = 0.1, legend = kimura_cats, fill = kimura_colors,
          border = "grey5", bty = "o", box.lwd = 0.3, title = "K2p",
          cex = 0.8, text.width = twidth, xpd = TRUE)
+  }
+  if (!is.null(data_identity)) {
+  legend(x = 0.82, y = 0.1, legend = identity_cats, fill = identity_colors,
+         border = "grey5", bty = "o", box.lwd = 0.3, title = "Identity",
+         cex = 0.8, text.width = twidth, xpd = TRUE)
+  }
 }
 
 # =========================================
@@ -880,6 +914,10 @@ add_axis_pct(kp, panel = 1)
 # K2p stacked percentages
 if (!is.null(data_kimura)) {
   draw_k2p_panel(kp, data_kimura)
+}
+
+if (!is.null(data_identity)) {
+  draw_identity_panel(kp, data_identity)
 }
 
 add_legends()
@@ -917,6 +955,15 @@ if (!is.null(opt$perclass)) {
       add_axis_pct(kp, panel = 2, r0 = 1, r1 = 0, labels = c("0%", "50%", "100%"))
     }
 
+    if (!is.null(data_identity)) {
+      columns <- paste0(cls, "_", gsub("-", ".", identity_cats), "_pct_stacked")
+      for (i in seq_along(columns)) {
+        kpArea(kp, chr = data$chrom, x = data$barycenter, y = data_identity[[columns[i]]],
+               col = identity_colors[i], border = "NA", r0 = 1, r1 = 0, data.panel = 2)
+      }
+      add_axis_pct(kp, panel = 2, r0 = 1, r1 = 0, labels = c("0%", "50%", "100%"))
+    }
+
     add_legends()
     title(paste0("Percentage of ", cls, " content along chromosomes - ", name),
           cex.main = 0.8, line = 2.5)
@@ -946,6 +993,10 @@ add_axis_counts(kp, overall_max)
 
 if (!is.null(data_kimura)) {
   draw_k2p_panel(kp, data_kimura)
+}
+
+if (!is.null(data_identity)) {
+  draw_identity_panel(kp, data_identity)
 }
 
 add_legends()

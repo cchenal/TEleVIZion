@@ -102,8 +102,8 @@ def parse_repeatmasker_output(repeatmasker_file, windows_dict, kimura_dict = Non
             for rep_class in repeats:
                 insertions[chrom][window][rep_class] = {}
                 for rep_family in repeats[rep_class]:
-                    insertions[chrom][window][rep_class][rep_family] = {"count":0, "length":0}
-            insertions[chrom][window]["Ambiguous"] = {"NA": {"count":0, "length":0}} 
+                    insertions[chrom][window][rep_class][rep_family] = {"count":0, "length":0, "divergence":[]}
+            insertions[chrom][window]["Ambiguous"] = {"NA": {"count":0, "length":0, "divergence":[]}} 
 
     # Initialise kimura_div dict, by chromosomes and affiliated windows
     if kimura_dict != None:
@@ -153,7 +153,9 @@ def parse_repeatmasker_output(repeatmasker_file, windows_dict, kimura_dict = Non
                             "end":int(end), 
                             "rep_class":rep_class, 
                             "rep_family":rep_family,
-                            "rep_element":fields[9]}
+                            "rep_element":fields[9],
+                            "divergence":float(fields[1])
+                            }
                         counter += 1
         # Update insertions dict
         for window in insertions[chromosome]:
@@ -169,7 +171,8 @@ def parse_repeatmasker_output(repeatmasker_file, windows_dict, kimura_dict = Non
                         "end":max_bp_to_consider, 
                         "rep_class":tmp_insertions[tmp]["rep_class"], 
                         "rep_family":tmp_insertions[tmp]["rep_family"],
-                        "rep_element":tmp_insertions[tmp]["rep_element"]
+                        "rep_element":tmp_insertions[tmp]["rep_element"],
+                        "divergence":tmp_insertions[tmp]["divergence"]
                     }
 
             # Detect overlapping annotations to avoid length/percentages > 100%
@@ -252,8 +255,8 @@ def parse_edta_output(edta_file, windows_dict):
             for rep_class in repeats:
                 insertions[chrom][window][rep_class] = {}
                 for rep_family in repeats[rep_class]:
-                    insertions[chrom][window][rep_class][rep_family] = {"count":0, "length":0}
-            insertions[chrom][window]["Ambiguous"] = {"NA": {"count":0, "length":0}} # Can be refined later (DNA_LTR, DNA_DNA, ...).
+                    insertions[chrom][window][rep_class][rep_family] = {"count":0, "length":0, "identity":[]}
+            insertions[chrom][window]["Ambiguous"] = {"NA": {"count":0, "length":0, "identity":[]}} # Can be refined later (DNA_LTR, DNA_DNA, ...).
     # Fill insertions dict chromosome per chromosome to limit memory usage
     for chromosome in insertions:
         # print(chromosome)
@@ -263,7 +266,6 @@ def parse_edta_output(edta_file, windows_dict):
                 fields = line[:-1].split("\t")
                 chrom = fields[0]
                 if chrom == chromosome:
-                    # print(fields)
                     start = min(int(fields[3]), int(fields[4]))
                     end = max(int(fields[3]), int(fields[4]))
                     classification = fields[8].split("classification=")[1].split(";")[0].split("/")
@@ -275,12 +277,18 @@ def parse_edta_output(edta_file, windows_dict):
                             rep_family = "NA"
                         else:
                             rep_family = classification[1]
+                    rep_element = fields[8].split("Name=")[1].split(";")[0]
+                    identity = fields[8].split("identity=")[1].split(";")[0]
+                    if identity != "NA":
+                        identity = float(identity)
                     chrom_insertions[str(counter)] = {
                         "chrom":chrom, 
                         "start":int(start), 
                         "end":int(end), 
                         "rep_class":rep_class, 
-                        "rep_family":rep_family
+                        "rep_family":rep_family,
+                        "rep_element":rep_element,
+                        "match_identity":identity
                         }
                     counter += 1
         for window in insertions[chromosome]:
@@ -295,7 +303,9 @@ def parse_edta_output(edta_file, windows_dict):
                         "start":min_bp_to_consider, 
                         "end":max_bp_to_consider, 
                         "rep_class":chrom_insertions[tmp]["rep_class"], 
-                        "rep_family":chrom_insertions[tmp]["rep_family"]
+                        "rep_family":chrom_insertions[tmp]["rep_family"],
+                        "rep_element":chrom_insertions[tmp]["rep_element"], 
+                        "match_identity":chrom_insertions[tmp]["match_identity"]
                     }
             # Detect nested variations to avoid length/percentages > 100%
             segments = detect_overlapping_annotations(window_insertions_dict = window_insertions)
@@ -312,6 +322,8 @@ def parse_edta_output(edta_file, windows_dict):
                         if entry["id"] not in visited:
                             insertions[chromosome][window][entry['rep_class']][entry['rep_family']]["count"] += 1 
                             visited.append(entry["id"])
+                            if entry["match_identity"] != "NA":
+                                insertions[chromosome][window][entry['rep_class']][entry['rep_family']]["identity"].append(entry["match_identity"])
                         insertions[chromosome][window][entry['rep_class']][entry['rep_family']]["length"] += len_bp_to_consider
                 elif data['count'] >= 2:
                     rep_class_comp, rep_family_comp = [], []
@@ -326,10 +338,14 @@ def parse_edta_output(edta_file, windows_dict):
                         # Same rep_class and rep_family
                         insertions[chromosome][window][rep_class_comp[0]][rep_family_comp[0]]["count"] += 1 
                         insertions[chromosome][window][rep_class_comp[0]][rep_family_comp[0]]["length"] += len_bp_to_consider
+                        if entry["match_identity"] != "NA":
+                            insertions[chromosome][window][rep_class_comp[0]][rep_family_comp[0]]["identity"].append(entry["match_identity"])
                     else:
                         # Different rep_class and/or rep_family
                         insertions[chromosome][window]["Ambiguous"]["NA"]["count"] += 1 
                         insertions[chromosome][window]["Ambiguous"]["NA"]["length"] += len_bp_to_consider
+                        if entry["match_identity"] != "NA":
+                            insertions[chromosome][window]["Ambiguous"]["NA"]["identity"].append(entry["match_identity"])
 
     return(repeats, insertions)
 
@@ -370,13 +386,28 @@ def detect_overlapping_annotations(window_insertions_dict):
 
         for ov in overlaps:
             info = window_insertions_dict[ov.data]
-            segment_data["entries"].append({
-                "id": ov.data,
-                "rep_class": info["rep_class"],
-                "rep_family": info["rep_family"],
-                "rep_element":info["rep_element"]
-            })
-
+            if "match_identity" in info.keys():
+                segment_data["entries"].append({
+                    "id": ov.data,
+                    "rep_class": info["rep_class"],
+                    "rep_family": info["rep_family"],
+                    "rep_element":info["rep_element"],
+                    "match_identity":info["match_identity"]
+                })
+            else:
+                segment_data["entries"].append({
+                    "id": ov.data,
+                    "rep_class": info["rep_class"],
+                    "rep_family": info["rep_family"],
+                    "rep_element":info["rep_element"]
+                })
+            # if "rep_element" in info.keys():
+            # else:
+            #     segment_data["entries"].append({
+            #         "id": ov.data,
+            #         "rep_class": info["rep_class"],
+            #         "rep_family": info["rep_family"]
+            #     })
         segments[key] = segment_data
 
     return(segments)
@@ -450,7 +481,7 @@ def plot_family_insertions(name, insertions, chrom_names, agg_global, class_orde
     """
     print("# Running plot_family_insertions function\n")
 
-    os.makedirs('analyses', exist_ok=True)
+    os.makedirs(f'analyses/{name}', exist_ok=True)
 
     # Use Tahoma for all fonts
     # plt.rcParams['font.family'] = 'Tahoma'
@@ -564,10 +595,10 @@ def plot_family_insertions(name, insertions, chrom_names, agg_global, class_orde
         plt.close(fig)
 
     # Generate plots if not already existing 
-    _plot_stacked(agg_global,'count', 'Insertion count', f'Stacked Counts - Whole Genome - {name}', f'analyses/{name}_whole_genome_stacked_counts_by_class.pdf', width=width, height=height)
-    _plot_stacked(agg_global,'length', 'Base pair span', f'Stacked Lengths - Whole Genome - {name}', f'analyses/{name}_whole_genome_stacked_lengths_by_class.pdf', width=width, height=height)
-    _plot_contiguous(agg_global,'count', 'Insertion count', f'Counts by Type - Whole Genome - {name}', f'analyses/{name}_whole_genome_contiguous_counts_by_class.pdf', width=width, height=height)
-    _plot_contiguous(agg_global,'length', 'Base pair span', f'Lengths by Type - Whole Genome - {name}', f'analyses/{name}_whole_genome_contiguous_lengths_by_class.pdf', width=width, height=height)
+    _plot_stacked(agg_global,'count', 'Insertion count', f'Stacked Counts - Whole Genome - {name}', f'analyses/{name}/{name}_whole_genome_stacked_counts_by_class.pdf', width=width, height=height)
+    _plot_stacked(agg_global,'length', 'Base pair span', f'Stacked Lengths - Whole Genome - {name}', f'analyses/{name}/{name}_whole_genome_stacked_lengths_by_class.pdf', width=width, height=height)
+    _plot_contiguous(agg_global,'count', 'Insertion count', f'Counts by Type - Whole Genome - {name}', f'analyses/{name}/{name}_whole_genome_contiguous_counts_by_class.pdf', width=width, height=height)
+    _plot_contiguous(agg_global,'length', 'Base pair span', f'Lengths by Type - Whole Genome - {name}', f'analyses/{name}/{name}_whole_genome_contiguous_lengths_by_class.pdf', width=width, height=height)
 
     if per_chromosome:
         for chrom, windows in insertions.items():
@@ -579,10 +610,10 @@ def plot_family_insertions(name, insertions, chrom_names, agg_global, class_orde
             df_chr=pd.DataFrame(rec)
             if df_chr.empty: continue
             agg_chr=df_chr.groupby(['rep_class','rep_family'])[['count','length']].sum().reset_index()
-            _plot_stacked(agg_chr,'count','Insertion count', f'Stacked Counts in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}_{chrom_names[chrom]}_stacked_counts_by_class.pdf', width=width, height=height)
-            _plot_stacked(agg_chr,'length','Base pair span', f'Stacked Lengths in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}_{chrom_names[chrom]}_stacked_lengths_by_class.pdf', width=width, height=height)
-            _plot_contiguous(agg_chr,'count','Insertion count', f'Counts by Type in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}_{chrom_names[chrom]}_contiguous_counts_by_class.pdf', width=width, height=height)
-            _plot_contiguous(agg_chr,'length','Base pair span', f'Lengths by Type in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}_{chrom_names[chrom]}_contiguous_lengths_by_class.pdf', width=width, height=height)
+            _plot_stacked(agg_chr,'count','Insertion count', f'Stacked Counts in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}/{name}_{chrom_names[chrom]}_stacked_counts_by_class.pdf', width=width, height=height)
+            _plot_stacked(agg_chr,'length','Base pair span', f'Stacked Lengths in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}/{name}_{chrom_names[chrom]}_stacked_lengths_by_class.pdf', width=width, height=height)
+            _plot_contiguous(agg_chr,'count','Insertion count', f'Counts by Type in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}/{name}_{chrom_names[chrom]}_contiguous_counts_by_class.pdf', width=width, height=height)
+            _plot_contiguous(agg_chr,'length','Base pair span', f'Lengths by Type in chromosome {chrom_names[chrom]} - {name}', f'analyses/{name}/{name}_{chrom_names[chrom]}_contiguous_lengths_by_class.pdf', width=width, height=height)
     
     # return(class_order, class_colors_hex, fam_colors)
 
@@ -591,9 +622,9 @@ def export_window_class_bed(name, window_size, insertions, windows, class_colors
     """
     print("# Running export_window_class_bed function\n")
 
-    os.makedirs('analyses/karyoplot_tables', exist_ok = True)
+    os.makedirs(f'analyses/{name}/karyoplot_tables', exist_ok = True)
 
-    output_bed = f'analyses/karyoplot_tables/{name}_{window_size}_repeat_classes.bed'
+    output_bed = f'analyses/{name}/karyoplot_tables/{name}_{window_size}_repeat_classes.bed'
 
     # TO DO 
     # if (os.path.isfile(output_bed)) and (os.stat(output_bed).st_size != 0):
@@ -661,9 +692,8 @@ def export_window_kimura_bed(name, window_size, kimura_div, windows, class_order
     """
     print("# Running export_window_kimura_bed function\n")
 
-    # os.makedirs('analyses/karyoplot_tables', exist_ok = True)
-
-    output_bed = f'analyses/karyoplot_tables/{name}_{window_size}_kimura.bed'
+    os.makedirs(f'analyses/{name}/karyoplot_tables', exist_ok = True)
+    output_bed = f'analyses/{name}/karyoplot_tables/{name}_{window_size}_kimura.bed'
 
     # TO DO 
     # if (os.path.isfile(output_bed)) and (os.stat(output_bed).st_size != 0):
@@ -691,7 +721,6 @@ def export_window_kimura_bed(name, window_size, kimura_div, windows, class_order
                 row[f"ALL_{category}_pct"] = 0 
 
             ### Per class
-            # not_to_plot = []
             for cls in class_order:
                 cats = kimura_div.get(chrom, {}).get(win_label, {}).get(cls, {})
                 if len(cats) > 0:
@@ -771,7 +800,123 @@ def export_window_kimura_bed(name, window_size, kimura_div, windows, class_order
 
     return(output_bed)
 
-def plot_karyoplots(name, window_size, genome_file, chromosomes, accessibility, classes, colors, plot_per_class, kimura_bed = None):
+def export_window_identity_bed(name, window_size, insertions, windows, class_order):
+    """
+    """
+    print("# Running export_window_identity_bed function\n")
+
+    output_bed = f'analyses/{name}/karyoplot_tables/{name}_{window_size}_identity.bed'
+    os.makedirs(f'analyses/{name}/karyoplot_tables', exist_ok = True)
+
+    id_cats = ["1-0.9", "0.9-0.75", "0.75-0.5", "0.5-0"]
+
+    identity = {}
+
+    for chrom in insertions:
+        if chrom not in identity:
+            identity[chrom] = {}
+        for window in insertions[chrom]:
+            if window not in identity[chrom]:
+                identity[chrom][window] = {}
+            for rep_class in insertions[chrom][window]:
+                if rep_class not in identity[chrom][window]:
+                    identity[chrom][window][rep_class] = {"1-0.9":0, "0.9-0.75":0, "0.75-0.5":0, "0.5-0":0}
+                for rep_family in insertions[chrom][window][rep_class]:
+                    for i in insertions[chrom][window][rep_class][rep_family]["identity"]:
+                        if i >= 0.9:
+                            identity[chrom][window][rep_class]["1-0.9"] += 1
+                        elif i >= 0.75:
+                            identity[chrom][window][rep_class]["0.9-0.75"] += 1
+                        elif i >= 0.5:
+                            identity[chrom][window][rep_class]["0.75-0.5"] += 1
+                        else:
+                            identity[chrom][window][rep_class]["0.5-0"] += 1
+
+
+    # Build rows
+    rows = []
+    for chrom, win_list in windows.items():
+        for win_label in win_list:
+            parts = win_label.split('-')
+            if len(parts) != 3:
+                continue
+            _, start_s, end_s = parts
+            start = int(start_s) - 1
+            end = int(end_s)
+            window_len = end - start
+            window_karyoplotr = int(start + (window_len/2))
+            row = {'chrom': chrom, 'start': start, 'end': end, 'barycenter': window_karyoplotr}
+            alls = []
+            for category in id_cats:
+                alls.append(f"ALL_{category}_pct")
+                row[f"ALL_{category}_count"] = 0 
+                row[f"ALL_{category}_pct"] = 0 
+
+            ### Per class
+            for cls in class_order:
+                cats = identity.get(chrom, {}).get(win_label, {}).get(cls, {})
+                if len(cats) > 0:
+                    cnt_sum = sum(m for m in cats.values())
+                    for category in id_cats:
+                        row[f'{cls}_{category}_count'] = cats[category]
+                        row[f"ALL_{category}_count"] += cats[category] # Prepare all classes
+                        if cnt_sum != 0:
+                            row[f'{cls}_{category}_pct'] = round(cats[category] / cnt_sum, 4)
+                        else: 
+                            row[f'{cls}_{category}_pct'] = 0
+                else:
+                    for category in id_cats:
+                        row[f'{cls}_{category}_count'] = 0
+                        row[f'{cls}_{category}_pct'] = 0
+
+            ### All classes
+            cnt_sum = 0
+            for category in id_cats:
+                cnt_sum += row[f"ALL_{category}_count"]
+            for category in id_cats:
+                if cnt_sum != 0:
+                    row[f"ALL_{category}_pct"] = round(row[f"ALL_{category}_count"] / cnt_sum, 4)
+                else: 
+                    row[f'ALL_{category}_pct'] = 0
+                
+            rows.append(row)
+
+    df = pd.DataFrame(rows)
+    
+    # Compute stacked percentages for ALL
+    stacked = df[alls].cumsum(axis=1)
+    stacked.columns = [f'ALL_{category}_pct_stacked' for category in id_cats]
+    df = pd.concat([df, stacked], axis=1)
+
+    # Compute stacked percentages per class
+    for cls in class_order:
+        to_stack = []
+        for category in id_cats:
+            to_stack.append(f"{cls}_{category}_pct")
+        stacked = df[to_stack].cumsum(axis=1)
+        stacked.columns = [f'{cls}_{category}_pct_stacked' for category in id_cats]
+        df = pd.concat([df, stacked], axis=1)
+
+    # Build final column order: chrom, start, end, then per class:
+    cols = ['chrom', 'start', 'end', 'barycenter']
+    for category in id_cats:
+        cols.append(f'ALL_{category}_count')
+        cols.append(f'ALL_{category}_pct')
+        cols.append(f'ALL_{category}_pct_stacked')
+        df[f'ALL_{category}_pct_stacked'] = df[f'ALL_{category}_pct_stacked'].clip(upper=1)
+    for cls in class_order:
+        for category in id_cats:
+            cols.append(f'{cls}_{category}_count')
+            cols.append(f'{cls}_{category}_pct')
+            cols.append(f'{cls}_{category}_pct_stacked')
+            df[f'{cls}_{category}_pct_stacked'] = df[f'{cls}_{category}_pct_stacked'].clip(upper=1)
+
+    df = df[cols]
+    df.to_csv(output_bed, sep='\t', index=False)
+
+    return(output_bed)
+
+def plot_karyoplots(name, window_size, genome_file, chromosomes, accessibility, classes, colors, plot_per_class, kimura_bed = None, identity_bed = None):
     """
     """
     print("# Running plot_karyoplots function\n")
@@ -781,7 +926,7 @@ def plot_karyoplots(name, window_size, genome_file, chromosomes, accessibility, 
     # print(cmd)
     # subprocess.run(cmd.split(" "), check=True)
 
-    cmd = f'Rscript scripts/plot_chromosomes_kimura.R --name {name} --genome {genome_file} --chromosome {chromosomes} --accessibility {accessibility} --input analyses/karyoplot_tables/{name}_{window_size}_repeat_classes.bed --classesorder {classes} --perclass {plot_per_class} --colorsorder {colors} --output analyses/{name}_{window_size} --kimura {kimura_bed}'
+    cmd = f'Rscript scripts/plot_chromosomes_kimura.R --name {name} --genome {genome_file} --chromosome {chromosomes} --accessibility {accessibility} --input analyses/{name}/karyoplot_tables/{name}_{window_size}_repeat_classes.bed --classesorder {classes} --perclass {plot_per_class} --colorsorder {colors} --output analyses/{name}/{name}_{window_size} --kimura {kimura_bed} --edtaidentity {identity_bed}'
     print(cmd)
     subprocess.run(cmd.split(" "), check=True)
 
@@ -961,6 +1106,17 @@ if __name__ == "__main__":
     else:
         kimura_bed = None
     
+    if args.edta != None:
+        identity_bed = export_window_identity_bed(
+            name = name,
+            window_size = window_size, 
+            insertions = insertions, 
+            windows = windows, 
+            class_order = class_order
+        )
+    else:
+        identity_bed = None
+
     plot_karyoplots(
         name = name, 
         window_size = window_size,
@@ -970,7 +1126,8 @@ if __name__ == "__main__":
         classes = reversed_classes, 
         colors = reversed_colors,
         plot_per_class = per_class,
-        kimura_bed = kimura_bed
+        kimura_bed = kimura_bed,
+        identity_bed = identity_bed
     )
 
 
