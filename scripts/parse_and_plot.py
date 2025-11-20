@@ -35,14 +35,17 @@ def define_windows(genome_file, window_size, chrom_to_plot):
 def create_gc_content(fasta_file = None, gc_windows = 10000):
     print("# Running create_gc_content function\n")
     
-    if (fasta != None) and (args.accessibility != None):
+    gc_file = "not_displayed"
+    if (fasta_file != None):
         if os.path.isfile(fasta_file):
-            gc_file = f"{fasta[:-6]}_gc_windows_{gc_windows}.tsv"
+            gc_file = f"{fasta_file[:-6]}_gc_windows_{gc_windows}.tsv"
             if not os.path.isfile(gc_file):
-                cmd = f"python3 scripts/create_gc_content.py {fasta} --window {gc_windows} --out {gc_file}"
+                cmd = f"python3 scripts/create_gc_content.py {fasta_file} --window {gc_windows} --out {gc_file}"
                 subprocess.run(cmd.split(" "), check=True)
+            else:
+                print(f"GC file already exists! If you want to update it, please delete {gc_file}\n")
         else:
-            print(f"Warning! Provided .fasta file ({fasta}) doesn't exist -- GC content has not been calculated\n")
+            print(f"Warning! Provided .fasta file ({fasta_file}) doesn't exist -- GC content has not been calculated\n")
     return(gc_file)
 
 def parse_repeatmasker_kimura(repeatmasker_kimura_file):
@@ -202,12 +205,13 @@ def parse_repeatmasker_output(repeatmasker_file, windows_dict, kimura_dict = Non
                     for entry in data["entries"]:
                         if entry["id"] not in visited:
                             insertions[chromosome][window][entry['rep_class']][entry['rep_family']]["count"] += 1 
+                            insertions[chromosome][window][entry['rep_class']][entry['rep_family']]["divergence"].append(entry["divergence"])
                             visited.append(entry["id"])
                             if (kimura_dict != None) and (entry['rep_element'] in kimura_dict):
                                 kimura_div[chromosome][window][entry['rep_class']][kimura_dict[entry['rep_element']]['category']] += 1
                         insertions[chromosome][window][entry['rep_class']][entry['rep_family']]["length"] += len_bp_to_consider
                 elif data['count'] >= 2:
-                    rep_class_comp, rep_family_comp = [], []
+                    rep_class_comp, rep_family_comp, divs = [], [], []
                     for entry in data["entries"]:
                         if entry["rep_class"] not in rep_class_comp:
                             rep_class_comp.append(entry["rep_class"])
@@ -215,18 +219,29 @@ def parse_repeatmasker_output(repeatmasker_file, windows_dict, kimura_dict = Non
                             rep_family_comp.append(entry["rep_family"])
                         if entry["id"] not in visited:
                             visited.append(entry["id"])
+                        divs.append(entry["divergence"])
                     if (len(rep_class_comp) == 1) and (len(rep_family_comp) == 1):
                         # Same rep_class and rep_family
                         insertions[chromosome][window][rep_class_comp[0]][rep_family_comp[0]]["count"] += 1 
+                        insertions[chromosome][window][rep_class_comp[0]][rep_family_comp[0]]["divergence"].append(np.mean(divs))
                         if (kimura_dict != None) and (entry['rep_element'] in kimura_dict):
                             kimura_div[chromosome][window][entry['rep_class']][kimura_dict[entry['rep_element']]['category']] += 1
                         insertions[chromosome][window][rep_class_comp[0]][rep_family_comp[0]]["length"] += len_bp_to_consider
                     else:
                         # Different rep_class and/or rep_family
                         insertions[chromosome][window]["Ambiguous"]["NA"]["count"] += 1 
+                        insertions[chromosome][window]["Ambiguous"]["NA"]["divergence"].append(np.mean(divs))
                         if (kimura_dict != None) and (entry['rep_element'] in kimura_dict):
                             kimura_div[chromosome][window][entry['rep_class']][kimura_dict[entry['rep_element']]['category']] += 1
                         insertions[chromosome][window]["Ambiguous"]["NA"]["length"] += len_bp_to_consider
+
+    for chromosome in insertions:
+        for window in insertions[chromosome]:
+            for rep_class in insertions[chromosome]:
+                for rep_family in insertions[chromosome][rep_class]:
+                    insertions[chromosome][window][rep_class][rep_family]["identity"] = []
+                    for d in insertions[chromosome][window][rep_class][rep_family]["divergence"]:
+                        insertions[chromosome][window][rep_class][rep_family]["identity"].append(1 - d/100)
 
     if kimura_dict != None:
         # print(kimura_div)
@@ -339,7 +354,7 @@ def parse_edta_output(edta_file, windows_dict):
                                 insertions[chromosome][window][entry['rep_class']][entry['rep_family']]["identity"].append(entry["match_identity"])
                         insertions[chromosome][window][entry['rep_class']][entry['rep_family']]["length"] += len_bp_to_consider
                 elif data['count'] >= 2:
-                    rep_class_comp, rep_family_comp = [], []
+                    rep_class_comp, rep_family_comp, match_ids = [], [], []
                     for entry in data["entries"]:
                         if entry["rep_class"] not in rep_class_comp:
                             rep_class_comp.append(entry["rep_class"])
@@ -347,18 +362,20 @@ def parse_edta_output(edta_file, windows_dict):
                             rep_family_comp.append(entry["rep_family"])
                         if entry["id"] not in visited:
                             visited.append(entry["id"])
+                        if entry["match_identity"] != "NA":
+                            match_ids.append(entry["match_identity"])
                     if (len(rep_class_comp) == 1) and (len(rep_family_comp) == 1):
                         # Same rep_class and rep_family
                         insertions[chromosome][window][rep_class_comp[0]][rep_family_comp[0]]["count"] += 1 
                         insertions[chromosome][window][rep_class_comp[0]][rep_family_comp[0]]["length"] += len_bp_to_consider
                         if entry["match_identity"] != "NA":
-                            insertions[chromosome][window][rep_class_comp[0]][rep_family_comp[0]]["identity"].append(entry["match_identity"])
+                            insertions[chromosome][window][rep_class_comp[0]][rep_family_comp[0]]["identity"].append(np.mean(match_ids))
                     else:
                         # Different rep_class and/or rep_family
                         insertions[chromosome][window]["Ambiguous"]["NA"]["count"] += 1 
                         insertions[chromosome][window]["Ambiguous"]["NA"]["length"] += len_bp_to_consider
                         if entry["match_identity"] != "NA":
-                            insertions[chromosome][window]["Ambiguous"]["NA"]["identity"].append(entry["match_identity"])
+                            insertions[chromosome][window]["Ambiguous"]["NA"]["identity"].append(np.mean(match_ids))
 
     return(repeats, insertions)
 
@@ -821,7 +838,7 @@ def export_window_identity_bed(name, window_size, insertions, windows, class_ord
     output_bed = f'analyses/{name}/karyoplot_tables/{name}_{window_size}_identity.bed'
     os.makedirs(f'analyses/{name}/karyoplot_tables', exist_ok = True)
 
-    id_cats = ["1-0.9", "0.9-0.75", "0.75-0.5", "0.5-0"]
+    id_cats = ["1-0.9", "0.9-0.8", "0.8-0.7", "0.7-0.6", "0.6-0"]
 
     identity = {}
 
@@ -833,17 +850,19 @@ def export_window_identity_bed(name, window_size, insertions, windows, class_ord
                 identity[chrom][window] = {}
             for rep_class in insertions[chrom][window]:
                 if rep_class not in identity[chrom][window]:
-                    identity[chrom][window][rep_class] = {"1-0.9":0, "0.9-0.75":0, "0.75-0.5":0, "0.5-0":0}
+                    identity[chrom][window][rep_class] = {"1-0.9":0, "0.9-0.8":0, "0.8-0.7":0, "0.7-0.6":0, "0.6-0":0}
                 for rep_family in insertions[chrom][window][rep_class]:
                     for i in insertions[chrom][window][rep_class][rep_family]["identity"]:
                         if i >= 0.9:
                             identity[chrom][window][rep_class]["1-0.9"] += 1
-                        elif i >= 0.75:
-                            identity[chrom][window][rep_class]["0.9-0.75"] += 1
-                        elif i >= 0.5:
-                            identity[chrom][window][rep_class]["0.75-0.5"] += 1
+                        elif i >= 0.8:
+                            identity[chrom][window][rep_class]["0.9-0.8"] += 1
+                        elif i >= 0.7:
+                            identity[chrom][window][rep_class]["0.8-0.7"] += 1
+                        elif i >= 0.6:
+                            identity[chrom][window][rep_class]["0.7-0.6"] += 1
                         else:
-                            identity[chrom][window][rep_class]["0.5-0"] += 1
+                            identity[chrom][window][rep_class]["0.6-0"] += 1
 
 
     # Build rows
@@ -929,7 +948,7 @@ def export_window_identity_bed(name, window_size, insertions, windows, class_ord
 
     return(output_bed)
 
-def plot_karyoplots(name, window_size, genome_file, chromosomes, accessibility, classes, colors, plot_per_class, kimura_bed = None, identity_bed = None):
+def plot_karyoplots(name, window_size, genome_file, chromosomes, accessibility, gc_content, classes, colors, plot_per_class, kimura_bed = None, identity_bed = None):
     """
     """
     print("# Running plot_karyoplots function\n")
@@ -939,7 +958,7 @@ def plot_karyoplots(name, window_size, genome_file, chromosomes, accessibility, 
     # print(cmd)
     # subprocess.run(cmd.split(" "), check=True)
 
-    cmd = f'Rscript scripts/plot_chromosomes_kimura.R --name {name} --genome {genome_file} --chromosome {chromosomes} --accessibility {accessibility} --input analyses/{name}/karyoplot_tables/{name}_{window_size}_repeat_classes.bed --classesorder {classes} --perclass {plot_per_class} --colorsorder {colors} --output analyses/{name}/{name}_{window_size} --kimura {kimura_bed} --edtaidentity {identity_bed}'
+    cmd = f'Rscript scripts/plot_chromosomes_kimura.R --name {name} --genome {genome_file} --chromosome {chromosomes} --accessibility {accessibility} --gccontent {gc_content} --input analyses/{name}/karyoplot_tables/{name}_{window_size}_repeat_classes.bed --classesorder {classes} --perclass {plot_per_class} --colorsorder {colors} --output analyses/{name}/{name}_{window_size} --kimura {kimura_bed} --identity {identity_bed}'
     print(cmd)
     subprocess.run(cmd.split(" "), check=True)
 
@@ -1020,6 +1039,13 @@ if __name__ == "__main__":
     else:
         accessibility = "not_displayed"
     print(f"Accessibility: {accessibility}")
+
+    if args.fasta != None:
+        gc_content = "To be shown"
+        fasta = args.fasta
+    else:
+        gc_content = "not_displayed"
+    print(f"GC content: {gc_content}")
 
     if (args.perchromosome == None) or (args.perchromosome == "False"):
         per_chrom = False
@@ -1127,8 +1153,16 @@ if __name__ == "__main__":
             windows = windows, 
             class_order = class_order
             )
+        identity_bed = None
     else:
         kimura_bed = None
+        identity_bed = export_window_identity_bed(
+            name = name,
+            window_size = window_size, 
+            insertions = insertions, 
+            windows = windows, 
+            class_order = class_order
+        )
     
     if args.edta != None:
         identity_bed = export_window_identity_bed(
@@ -1147,6 +1181,7 @@ if __name__ == "__main__":
         genome_file = genome, 
         chromosomes = chromosomes_to_plot, 
         accessibility = accessibility, 
+        gc_content = gc_file,
         classes = reversed_classes, 
         colors = reversed_colors,
         plot_per_class = per_class,
