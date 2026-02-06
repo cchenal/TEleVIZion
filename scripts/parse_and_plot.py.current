@@ -8,6 +8,9 @@ from matplotlib.colors import to_hex
 import pandas as pd
 import subprocess
 from intervaltree import IntervalTree
+from televizion import aggregation as televizion_aggregation
+from televizion import io as televizion_io
+from televizion import plotting as televizion_plotting
 
 def define_windows(genome_file, window_size, chrom_to_plot):
     print("\n\n# Running define_windows function\n")
@@ -1080,7 +1083,7 @@ if __name__ == "__main__":
 
     # Define windows 
 
-    windows, chromosomes_to_plot, chrom_names = define_windows(
+    windows, chromosomes_to_plot, chrom_names = televizion_aggregation.build_windows(
         genome_file = genome, 
         window_size = window_size,
         chrom_to_plot = chrom_to_plot
@@ -1088,7 +1091,7 @@ if __name__ == "__main__":
 
     # Create GC content
 
-    gc_file = create_gc_content(
+    gc_file = televizion_io.compute_gc_content(
         fasta_file = fasta, 
         gc_windows = 10000
     )
@@ -1097,37 +1100,37 @@ if __name__ == "__main__":
 
     if args.repeatmasker != None:
         if kimura_file != None:
-            kimura_dict = parse_repeatmasker_kimura(
+            kimura_dict = televizion_io.parse_repeatmasker_kimura_bins(
                 repeatmasker_kimura_file = kimura_file
             )
-            repeats, insertions, kimura_div = parse_repeatmasker_output(
+            repeats, insertions, kimura_div = televizion_io.parse_repeatmasker_annotations(
                 repeatmasker_file = file,
                 windows_dict = windows, 
                 kimura_dict = kimura_dict
             )
         else:
-            repeats, insertions = parse_repeatmasker_output(
+            repeats, insertions = televizion_io.parse_repeatmasker_annotations(
                 repeatmasker_file = file,
                 windows_dict = windows
             )
         
     elif args.edta != None:
-        repeats, insertions = parse_edta_output(
+        repeats, insertions = televizion_io.parse_edta_annotations(
             edta_file = file,
             windows_dict = windows
         )
 
     # Plots (whole genome or list of chromosomes)
 
-    agg_global, class_order, class_colors_hex, fam_colors = manage_colors(
-        insertions = insertions, 
+    agg_global, class_order, class_colors_hex, fam_colors = televizion_plotting.build_color_maps(
+        annotations_by_window = insertions,
         classes_order = classes_order,
         palette = palette
         )
     
-    plot_family_insertions(
+    televizion_plotting.plot_repeat_family_bars(
         name = name,
-        insertions = insertions, 
+        annotations_by_window = insertions,
         per_chromosome = per_chrom,
         chrom_names = chrom_names,
         agg_global = agg_global,
@@ -1138,46 +1141,46 @@ if __name__ == "__main__":
         height = height
         )
            
-    reversed_classes, reversed_colors = export_window_class_bed(
+    reversed_classes, reversed_colors = televizion_aggregation.export_window_class_table(
         name = name,
         window_size = window_size,
         windows = windows,
-        insertions = insertions, 
-        class_colors = class_colors_hex, 
+        annotations_by_window = insertions,
+        class_colors = class_colors_hex,
         class_order = class_order
-        ) 
+        )
     
     if kimura_file != None:
-        kimura_bed = export_window_kimura_bed(
-            name = name, 
-            window_size = window_size, 
-            kimura_div = kimura_div, 
-            windows = windows, 
+        kimura_bed = televizion_aggregation.export_window_kimura_table(
+            name = name,
+            window_size = window_size,
+            kimura_bins = kimura_div,
+            windows = windows,
             class_order = class_order
             )
         identity_bed = None
     else:
         kimura_bed = None
-        identity_bed = export_window_identity_bed(
+        identity_bed = televizion_aggregation.export_window_identity_table(
             name = name,
             window_size = window_size, 
-            insertions = insertions, 
+            annotations_by_window = insertions,
             windows = windows, 
             class_order = class_order
         )
     
     if args.edta != None:
-        identity_bed = export_window_identity_bed(
+        identity_bed = televizion_aggregation.export_window_identity_table(
             name = name,
             window_size = window_size, 
-            insertions = insertions, 
+            annotations_by_window = insertions,
             windows = windows, 
             class_order = class_order
         )
     else:
         identity_bed = None
 
-    plot_karyoplots(
+    televizion_plotting.plot_karyotype_tracks(
         name = name, 
         window_size = window_size,
         genome_file = genome, 

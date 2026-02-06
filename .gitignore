@@ -1,5 +1,7 @@
 data/*
 analyses/*
-.DS_Store
 
+.DS_Store
 data/.DS_Store
+data/TEFLoN2/.DS_Store
+data/TEFLoN2/samples/.DS_Store
