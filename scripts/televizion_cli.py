@@ -19,6 +19,36 @@ def parse_figsize(value):
         raise argparse.ArgumentTypeError("figsize must be in the format W,H (e.g., 10,8).")
 
 
+def parse_output_formats(value):
+    allowed_formats = {"pdf", "png", "jpg"}
+    output_formats = []
+    for raw_format in value.split(","):
+        fmt = raw_format.strip().lower()
+        if not fmt:
+            continue
+        if fmt not in allowed_formats:
+            raise argparse.ArgumentTypeError(
+                "output formats must be one or more of: pdf,png,jpg"
+            )
+        if fmt not in output_formats:
+            output_formats.append(fmt)
+    if not output_formats:
+        raise argparse.ArgumentTypeError(
+            "output formats must be one or more of: pdf,png,jpg"
+        )
+    return output_formats
+
+
+def parse_dpi(value):
+    try:
+        dpi = int(value)
+    except (TypeError, ValueError):
+        raise argparse.ArgumentTypeError("dpi must be an integer >= 300.")
+    if dpi < 300:
+        raise argparse.ArgumentTypeError("dpi must be >= 300.")
+    return dpi
+
+
 def infer_class_order_from_table(classes_table):
     """
     Infer repeat class order from a TEleVIZion repeat_classes table header.
@@ -135,6 +165,23 @@ def parse_args():
         ),
     )
     parser.add_argument(
+        "--output-formats",
+        required=False,
+        type=parse_output_formats,
+        default=["pdf"],
+        help=(
+            "Comma-separated output figure formats from pdf,png,jpg. "
+            "Default: pdf."
+        ),
+    )
+    parser.add_argument(
+        "--dpi",
+        required=False,
+        type=parse_dpi,
+        default=300,
+        help="Raster output resolution in dots per inch. Must be >= 300. Default: 300.",
+    )
+    parser.add_argument(
         "--palette",
         required=False,
         type=str,
@@ -192,6 +239,8 @@ def main():
     per_chrom = args.perchromosome
     per_class = args.perclass
     reuse_tables = args.reuse_karyoplot_tables
+    output_formats = args.output_formats
+    dpi = args.dpi
 
     if args.figsize is not None:
         width, height = args.figsize
@@ -228,6 +277,8 @@ def main():
     print(f"- per class: {per_class}")
     print(f"- reuse karyoplot tables: {reuse_tables}")
     print(f"- general statistics figure size: {width}, {height}")
+    print(f"- output formats: {','.join(output_formats)}")
+    print(f"- raster output dpi: {dpi}")
     print(f"- palette: {palette if palette is not None else 'default'}")
     print(f"- layout: {layout}")
     if zoom is not None:
@@ -303,6 +354,8 @@ def main():
             identity_bed=identity_bed,
             layout=layout,
             zoom=zoom,
+            output_formats=output_formats,
+            dpi=dpi,
         )
         return
 
@@ -350,6 +403,8 @@ def main():
         fam_colors=fam_colors,
         width=width,
         height=height,
+        output_formats=output_formats,
+        dpi=dpi,
     )
 
     reversed_classes, reversed_colors = televizion_aggregation.export_window_class_table(
@@ -401,6 +456,8 @@ def main():
         identity_bed=identity_bed,
         layout=layout,
         zoom=zoom,
+        output_formats=output_formats,
+        dpi=dpi,
     )
 
 

@@ -26,6 +26,10 @@ option_list <- list(
               help="Class color order (comma-separated, reversed for display).", metavar="character", dest="colorsorder"),
   make_option(c("-o", "--output"), type="character", default=NULL,
               help="Output prefix path.", metavar="character"),
+  make_option(c("--output-formats"), type="character", default="pdf",
+              help="Comma-separated output figure formats: pdf,png,jpg. Default: pdf.", metavar="character", dest="output_formats"),
+  make_option(c("--dpi"), type="integer", default=300,
+              help="Raster output resolution for png/jpg. Must be >= 300. Default: 300.", metavar="integer"),
   make_option(c("-m", "--kimura-table"), type="character", default=NULL,
               help="Kimura table (RepeatMasker only).", metavar="character", dest="kimura"),
   make_option(c("-e", "--identity-table"), type="character", default=NULL,
@@ -172,6 +176,23 @@ sanitize_filename <- function(x) {
   gsub("[^A-Za-z0-9._-]+", "_", x)
 }
 
+parse_output_formats <- function(value) {
+  formats <- tolower(trimws(unlist(strsplit(value, ","))))
+  formats <- formats[formats != ""]
+  allowed_formats <- c("pdf", "png", "jpg")
+  invalid_formats <- setdiff(formats, allowed_formats)
+  if (length(formats) == 0 || length(invalid_formats) > 0) {
+    stop("Invalid --output-formats value. Use one or more of: pdf,png,jpg.", call. = FALSE)
+  }
+  unique(formats)
+}
+
+output_formats <- parse_output_formats(opt$output_formats)
+output_dpi <- as.integer(opt$dpi)
+if (is.na(output_dpi) || output_dpi < 300) {
+  stop("--dpi must be an integer >= 300.", call. = FALSE)
+}
+
 # ---- Data
 data <- read.csv(opt$input,  sep = "\t")
 data_kimura <- if (!is.null(opt$kimura)) read.csv(opt$kimura, sep = "\t") else NULL
@@ -238,8 +259,27 @@ n_chr <- length(chromosome_order)
 plot_width <- 11.417
 plot_height <- if (layout_mode == "vertical") 1.2 * n_chr + 2 else 3.937
 
-plot_file <- function(stem) {
-  paste0(opt$output, zoom_suffix, stem)
+plot_file <- function(stem, output_format) {
+  paste0(opt$output, zoom_suffix, stem, ".", output_format)
+}
+
+open_plot_device <- function(file, output_format) {
+  if (output_format == "pdf") {
+    pdf(file, width = plot_width, height = plot_height)
+  } else if (output_format == "png") {
+    png(file, width = plot_width, height = plot_height, units = "in", res = output_dpi)
+  } else if (output_format == "jpg") {
+    jpeg(file, width = plot_width, height = plot_height, units = "in", res = output_dpi, quality = 95)
+  }
+}
+
+write_plot <- function(stem, plotter) {
+  for (output_format in output_formats) {
+    file <- plot_file(stem, output_format)
+    open_plot_device(file, output_format)
+    plotter()
+    dev.off()
+  }
 }
 
 plot_title <- function(text) {
@@ -459,63 +499,58 @@ add_legends <- function() {
 # =========================================
 
 # ---- All classes (stacked % by class + K2p)
-file <- plot_file("_karyoplot_stacked_percentage_by_class.pdf")
-pdf(file, width = plot_width, height = plot_height)
+write_plot("_karyoplot_stacked_percentage_by_class", function() {
+  kp <- plot_karyo_base()
 
-kp <- plot_karyo_base()
+  columns_pct <- paste0(classes_order, "_pct_stacked")
+  for (i in seq_along(columns_pct)) {
+    kpArea(kp, chr = data$chrom, x = data$barycenter, y = data[[columns_pct[i]]],
+           col = colors_order[i], border = "NA", r0 = 0, r1 = 1, data.panel = 1)
+  }
+  add_axis_pct(kp, panel = 1)
 
-columns_pct <- paste0(classes_order, "_pct_stacked")
-for (i in seq_along(columns_pct)) {
-  kpArea(kp, chr = data$chrom, x = data$barycenter, y = data[[columns_pct[i]]],
-         col = colors_order[i], border = "NA", r0 = 0, r1 = 1, data.panel = 1)
-}
-add_axis_pct(kp, panel = 1)
+  if (!is.null(data_kimura)) {
+    draw_k2p_panel(kp, data_kimura, kimura_cols_all)
+  }
 
-if (!is.null(data_kimura)) {
-  draw_k2p_panel(kp, data_kimura, kimura_cols_all)
-}
+  if (!is.null(data_identity)) {
+    draw_identity_panel(kp, data_identity, identity_cols_all)
+  }
 
-if (!is.null(data_identity)) {
-  draw_identity_panel(kp, data_identity, identity_cols_all)
-}
-
-add_legends()
-title(plot_title("Percentage of repeated content along chromosomes"),
-      cex.main = 0.8, line = 2.5)
-
-dev.off()
+  add_legends()
+  title(plot_title("Percentage of repeated content along chromosomes"),
+        cex.main = 0.8, line = 2.5)
+})
 
 # ---- Per class (% + K2p), if requested
 if (!is.null(opt$perclass)) {
   cols_all_pct <- paste0(classes_order, "_pct")
   for (cls in classes_order) {
-    file <- plot_file(paste0("_karyoplot_percentage_", cls, ".pdf"))
-    pdf(file, width = plot_width, height = plot_height)
+    write_plot(paste0("_karyoplot_percentage_", cls), function() {
+      kp <- plot_karyo_base()
 
-    kp <- plot_karyo_base()
-
-    for (i in seq_along(cols_all_pct)) {
-      if (identical(cols_all_pct[i], paste0(cls, "_pct"))) {
-        kpArea(kp, chr = data$chrom, x = data$barycenter, y = data[[cols_all_pct[i]]],
-               col = colors_order[i], border = "NA", r0 = 0, r1 = 1)
+      for (i in seq_along(cols_all_pct)) {
+        if (identical(cols_all_pct[i], paste0(cls, "_pct"))) {
+          kpArea(kp, chr = data$chrom, x = data$barycenter, y = data[[cols_all_pct[i]]],
+                 col = colors_order[i], border = "NA", r0 = 0, r1 = 1)
+        }
       }
-    }
-    add_axis_pct(kp, panel = 1)
+      add_axis_pct(kp, panel = 1)
 
-    if (!is.null(data_kimura)) {
-      columns <- paste0(cls, "_", gsub("-", ".", kimura_cats), "_pct_stacked")
-      draw_k2p_panel(kp, data_kimura, columns)
-    }
+      if (!is.null(data_kimura)) {
+        columns <- paste0(cls, "_", gsub("-", ".", kimura_cats), "_pct_stacked")
+        draw_k2p_panel(kp, data_kimura, columns)
+      }
 
-    if (!is.null(data_identity)) {
-      columns <- paste0(cls, "_", gsub("-", ".", identity_cats), "_pct_stacked")
-      draw_identity_panel(kp, data_identity, columns)
-    }
+      if (!is.null(data_identity)) {
+        columns <- paste0(cls, "_", gsub("-", ".", identity_cats), "_pct_stacked")
+        draw_identity_panel(kp, data_identity, columns)
+      }
 
-    add_legends()
-    title(plot_title(paste0("Percentage of ", cls, " content along chromosomes")),
-          cex.main = 0.8, line = 2.5)
-    dev.off()
+      add_legends()
+      title(plot_title(paste0("Percentage of ", cls, " content along chromosomes")),
+            cex.main = 0.8, line = 2.5)
+    })
   }
 }
 
@@ -524,59 +559,54 @@ if (!is.null(opt$perclass)) {
 # =========================================
 
 # ---- All classes (stacked counts + K2p)
-file <- plot_file("_karyoplot_stacked_counts_by_class.pdf")
-pdf(file, width = plot_width, height = plot_height)
+write_plot("_karyoplot_stacked_counts_by_class", function() {
+  kp <- plot_karyo_base()
 
-kp <- plot_karyo_base()
+  columns_cnt <- paste0(classes_order, "_count_stacked")
+  overall_max <- safe_max(data[, columns_cnt])
+  for (i in seq_along(columns_cnt)) {
+    kpArea(kp, chr = data$chrom, x = data$barycenter, y = data[[columns_cnt[i]]]/overall_max,
+           col = colors_order[i], border = "NA", r0 = 0, r1 = 1, data.panel = 1)
+  }
+  add_axis_counts(kp, overall_max)
 
-columns_cnt <- paste0(classes_order, "_count_stacked")
-overall_max <- safe_max(data[, columns_cnt])
-for (i in seq_along(columns_cnt)) {
-  kpArea(kp, chr = data$chrom, x = data$barycenter, y = data[[columns_cnt[i]]]/overall_max,
-         col = colors_order[i], border = "NA", r0 = 0, r1 = 1, data.panel = 1)
-}
-add_axis_counts(kp, overall_max)
+  if (!is.null(data_kimura)) {
+    draw_k2p_panel(kp, data_kimura, kimura_cols_all)
+  }
 
-if (!is.null(data_kimura)) {
-  draw_k2p_panel(kp, data_kimura, kimura_cols_all)
-}
+  if (!is.null(data_identity)) {
+    draw_identity_panel(kp, data_identity, identity_cols_all)
+  }
 
-if (!is.null(data_identity)) {
-  draw_identity_panel(kp, data_identity, identity_cols_all)
-}
-
-add_legends()
-title(plot_title("Number of insertions along chromosomes"),
-      cex.main = 0.8, line = 2.5)
-
-dev.off()
+  add_legends()
+  title(plot_title("Number of insertions along chromosomes"),
+        cex.main = 0.8, line = 2.5)
+})
 
 # ---- Per class (counts + K2p), if requested
 if (!is.null(opt$perclass)) {
   cols_all_cnt <- paste0(classes_order, "_count")
   overall_max <- safe_max(data[, cols_all_cnt])
   for (cls in classes_order) {
-    file <- plot_file(paste0("_karyoplot_counts_", cls, ".pdf"))
-    pdf(file, width = plot_width, height = plot_height)
+    write_plot(paste0("_karyoplot_counts_", cls), function() {
+      kp <- plot_karyo_base()
 
-    kp <- plot_karyo_base()
-
-    for (i in seq_along(cols_all_cnt)) {
-      if (identical(cols_all_cnt[i], paste0(cls, "_count"))) {
-        kpArea(kp, chr = data$chrom, x = data$barycenter, y = data[[cols_all_cnt[i]]]/overall_max,
-               col = colors_order[i], border = "NA", r0 = 0, r1 = 1)
+      for (i in seq_along(cols_all_cnt)) {
+        if (identical(cols_all_cnt[i], paste0(cls, "_count"))) {
+          kpArea(kp, chr = data$chrom, x = data$barycenter, y = data[[cols_all_cnt[i]]]/overall_max,
+                 col = colors_order[i], border = "NA", r0 = 0, r1 = 1)
+        }
       }
-    }
-    add_axis_counts(kp, overall_max)
+      add_axis_counts(kp, overall_max)
 
-    if (!is.null(data_kimura)) {
-      columns <- paste0(cls, "_", gsub("-", ".", kimura_cats), "_pct_stacked")
-      draw_k2p_panel(kp, data_kimura, columns)
-    }
+      if (!is.null(data_kimura)) {
+        columns <- paste0(cls, "_", gsub("-", ".", kimura_cats), "_pct_stacked")
+        draw_k2p_panel(kp, data_kimura, columns)
+      }
 
-    add_legends()
-    title(plot_title(paste0("Number of insertions of ", cls, " along chromosomes")),
-          cex.main = 0.8, line = 2.5)
-    dev.off()
+      add_legends()
+      title(plot_title(paste0("Number of insertions of ", cls, " along chromosomes")),
+            cex.main = 0.8, line = 2.5)
+    })
   }
 }

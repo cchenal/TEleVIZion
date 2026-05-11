@@ -8,7 +8,7 @@ bins, identity bins, GC content, and optional accessibility tracks occur.
 
 The project is designed for exploratory comparative genomics: start from an
 annotated genome, decide which chromosomes or scaffolds you want to inspect,
-choose a window size, and generate a compact set of PDF plots and tabular
+choose a window size, and generate a compact set of figures and tabular
 intermediate files under `analyses/<run_name>/`.
 
 ## Contents
@@ -320,7 +320,7 @@ python3 scripts/televizion_cli.py \
   --chromtoplot OX030923.1,OX030924.1,OX030925.1
 ```
 
-This creates:
+With the default `--output-formats pdf`, this creates:
 
 ```text
 analyses/MyGenome/
@@ -359,7 +359,7 @@ python3 scripts/televizion_cli.py \
 ```
 
 This produces whole-genome bar plots, a class/family karyotype, and a Kimura
-K2P panel in the karyotype PDFs.
+K2P panel in the karyotype figures.
 
 ### 2. EDTA Annotation With Identity Tracks
 
@@ -417,15 +417,15 @@ python3 scripts/televizion_cli.py \
 ```
 
 Per-chromosome plots are named with the `name` column from the genome metadata,
-for example:
+for example with the default PDF format:
 
 ```text
 analyses/PerChromosome/PerChromosome_chr2_stacked_counts_by_class.pdf
 ```
 
-### 5. Generate Per-Class Karyotype PDFs
+### 5. Generate Per-Class Karyotype Figures
 
-Add `--perclass` to create one karyotype PDF per repeat class in addition to the
+Add `--perclass` to create one karyotype figure per repeat class in addition to the
 stacked all-class plots:
 
 ```bash
@@ -438,7 +438,7 @@ python3 scripts/televizion_cli.py \
   --perclass
 ```
 
-Example per-class outputs:
+Example per-class outputs with the default PDF format:
 
 ```text
 analyses/PerClass/PerClass_250000_karyoplot_percentage_LTR.pdf
@@ -532,8 +532,8 @@ bar plots:
 - whole-genome contiguous counts and lengths
 - per-chromosome bar plots generated with `--perchromosome`
 
-It does not affect any R/karyoploteR karyotype PDFs, including the
-`*_karyoplot_*.pdf` outputs.
+It does not affect any R/karyoploteR karyotype figures, including the
+`*_karyoplot_*.<format>` outputs.
 
 ```bash
 python3 scripts/televizion_cli.py \
@@ -547,7 +547,26 @@ python3 scripts/televizion_cli.py \
 
 Use `W,H` in inches.
 
-### 11. Vertical Karyotype Layout
+### 11. Choose Output Formats And DPI
+
+By default, TEleVIZion writes figure outputs as PDF. Use `--output-formats` to
+request one or more formats among `pdf`, `png`, and `jpg`:
+
+```bash
+python3 scripts/televizion_cli.py \
+  --name MultiFormat \
+  --genome data/my_genome/chroms.tsv \
+  --repeatmasker data/my_genome/repeats.out \
+  --kimura data/my_genome/repeats.divsum \
+  --windowsize 500000 \
+  --output-formats pdf,png,jpg \
+  --dpi 300
+```
+
+The `--dpi` option controls PNG/JPG raster resolution and defaults to `300`.
+Values below `300` are rejected. PDF output remains vector-based where possible.
+
+### 12. Vertical Karyotype Layout
 
 Use `--layout vertical` to stack chromosomes vertically:
 
@@ -563,7 +582,7 @@ python3 scripts/televizion_cli.py \
 
 The default is `horizontal`.
 
-### 12. Zoom Into A Region
+### 13. Zoom Into A Region
 
 Use `--zoom` with `chrom:start-end`:
 
@@ -582,7 +601,7 @@ Zoom coordinates must be whole-number coordinates inside the chromosome bounds
 defined in the genome metadata. When zooming, choose a window size small enough
 that the region contains plotted windows.
 
-### 13. Reuse Existing Karyoplot Tables
+### 14. Reuse Existing Karyoplot Tables
 
 If the `analyses/<name>/karyoplot_tables/` files already exist, add
 `--reuse-karyoplot-tables` to skip annotation parsing and table export:
@@ -597,7 +616,7 @@ python3 scripts/televizion_cli.py \
   --reuse-karyoplot-tables
 ```
 
-In reuse mode, TEleVIZion regenerates the R karyotype PDFs from existing tables
+In reuse mode, TEleVIZion regenerates the R karyotype figures from existing tables
 but does not regenerate the Python whole-genome or per-chromosome bar plots.
 The repeat-class table is always required. If neither `--repeatmasker` nor
 `--edta` is provided, TEleVIZion automatically uses an existing Kimura table if
@@ -613,15 +632,23 @@ All outputs are written below:
 analyses/<name>/
 ```
 
+### Output Formats
+
+Figure outputs are PDF by default. If `--output-formats` contains multiple
+formats, each figure is written once per requested extension. For example,
+`--output-formats pdf,png,jpg` creates matching `.pdf`, `.png`, and `.jpg`
+files. PNG and JPG are written at `--dpi` resolution, with `300` dpi as the
+default minimum.
+
 ### Whole-Genome Summary Plots
 
-These PDFs are always produced:
+These figures are always produced:
 
 ```text
-<name>_whole_genome_stacked_counts_by_class.pdf
-<name>_whole_genome_stacked_lengths_by_class.pdf
-<name>_whole_genome_contiguous_counts_by_class.pdf
-<name>_whole_genome_contiguous_lengths_by_class.pdf
+<name>_whole_genome_stacked_counts_by_class.<format>
+<name>_whole_genome_stacked_lengths_by_class.<format>
+<name>_whole_genome_contiguous_counts_by_class.<format>
+<name>_whole_genome_contiguous_lengths_by_class.<format>
 ```
 
 Meaning:
@@ -636,32 +663,32 @@ Meaning:
 Produced only with `--perchromosome`:
 
 ```text
-<name>_<chromosome_display_name>_stacked_counts_by_class.pdf
-<name>_<chromosome_display_name>_stacked_lengths_by_class.pdf
-<name>_<chromosome_display_name>_contiguous_counts_by_class.pdf
-<name>_<chromosome_display_name>_contiguous_lengths_by_class.pdf
+<name>_<chromosome_display_name>_stacked_counts_by_class.<format>
+<name>_<chromosome_display_name>_stacked_lengths_by_class.<format>
+<name>_<chromosome_display_name>_contiguous_counts_by_class.<format>
+<name>_<chromosome_display_name>_contiguous_lengths_by_class.<format>
 ```
 
 ### Karyotype Plots
 
-These PDFs are always produced:
+These figures are always produced:
 
 ```text
-<name>_<windowsize>_karyoplot_stacked_percentage_by_class.pdf
-<name>_<windowsize>_karyoplot_stacked_counts_by_class.pdf
+<name>_<windowsize>_karyoplot_stacked_percentage_by_class.<format>
+<name>_<windowsize>_karyoplot_stacked_counts_by_class.<format>
 ```
 
-With `--perclass`, additional PDFs are produced:
+With `--perclass`, additional figures are produced:
 
 ```text
-<name>_<windowsize>_karyoplot_percentage_<class>.pdf
-<name>_<windowsize>_karyoplot_counts_<class>.pdf
+<name>_<windowsize>_karyoplot_percentage_<class>.<format>
+<name>_<windowsize>_karyoplot_counts_<class>.<format>
 ```
 
 With `--zoom`, the output filename includes a zoom suffix:
 
 ```text
-<name>_<windowsize>_zoom_<chrom>_<start>_<end>_karyoplot_stacked_percentage_by_class.pdf
+<name>_<windowsize>_zoom_<chrom>_<start>_<end>_karyoplot_stacked_percentage_by_class.<format>
 ```
 
 ### Karyoplot Tables
@@ -750,7 +777,13 @@ window `start` is 0-based, while `end` is the window end coordinate.
 
 --figsize W,H
     Python/Matplotlib general statistics bar plot size in inches. This does
-    not affect R/karyoploteR karyotype PDFs.
+    not affect R/karyoploteR karyotype figures.
+
+--output-formats FORMAT[,FORMAT...]
+    Figure output formats. Choose one or more of pdf, png, jpg. Default: pdf.
+
+--dpi DPI
+    Raster output resolution for png/jpg. Must be at least 300. Default: 300.
 
 --palette PALETTE
     TSV palette file for repeat class colours.

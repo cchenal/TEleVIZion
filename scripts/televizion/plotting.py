@@ -179,6 +179,19 @@ def build_color_maps(annotations_by_window, classes_order=None, palette=None):
     return (agg_global, class_order, class_colors_hex, fam_colors)
 
 
+def save_figure(fig, output_stem, output_formats, dpi=300):
+    """
+    Save a Matplotlib figure to one or more formats.
+    """
+    for output_format in output_formats:
+        fig.savefig(
+            f"{output_stem}.{output_format}",
+            format=output_format,
+            dpi=dpi,
+            bbox_inches="tight",
+        )
+
+
 # def plot_repeat_family_bars(
 #     name,
 #     annotations_by_window,
@@ -364,6 +377,8 @@ def plot_repeat_family_bars(
     per_chromosome=False,
     width=10,
     height=8,
+    output_formats=None,
+    dpi=300,
 ):
     """
     Plot stacked and contiguous repeat family bar charts for the genome.
@@ -371,6 +386,8 @@ def plot_repeat_family_bars(
     print("# Running plot_repeat_family_bars function\n")
 
     os.makedirs(f"analyses/{name}", exist_ok=True)
+    if output_formats is None:
+        output_formats = ["pdf"]
 
     class_list = class_order
     fam_colors_map = fam_colors
@@ -381,7 +398,7 @@ def plot_repeat_family_bars(
             lookup[(row["rep_class"], row["rep_family"])] = int(row[metric])
         return lookup
 
-    def _plot_stacked(agg_df, metric, ylabel, title, fname, width=10, height=8):
+    def _plot_stacked(agg_df, metric, ylabel, title, output_stem, width=10, height=8):
         value_lookup = _build_metric_lookup(agg_df, metric)
         fig, ax = plt.subplots(figsize=(width, height))
         x = np.arange(len(class_list))
@@ -418,10 +435,10 @@ def plot_repeat_family_bars(
             fontsize="small",
         )
         plt.tight_layout()
-        fig.savefig(f"{fname}", bbox_inches="tight")
+        save_figure(fig, output_stem, output_formats, dpi=dpi)
         plt.close(fig)
 
-    def _plot_contiguous(agg_df, metric, ylabel, title, fname, width=width, height=height):
+    def _plot_contiguous(agg_df, metric, ylabel, title, output_stem, width=width, height=height):
         value_lookup = _build_metric_lookup(agg_df, metric)
         fig, ax = plt.subplots(figsize=(width, height))
         families = []
@@ -450,7 +467,7 @@ def plot_repeat_family_bars(
         legend_handles = [mpatches.Patch(color=class_colors_hex[cls], label=cls) for cls in class_list]
         ax.legend(handles=legend_handles, title="Repeat class", loc="best", ncol=1, fontsize="small")
         plt.tight_layout()
-        fig.savefig(f"{fname}", bbox_inches="tight")
+        save_figure(fig, output_stem, output_formats, dpi=dpi)
         plt.close(fig)
 
     _plot_stacked(
@@ -458,7 +475,7 @@ def plot_repeat_family_bars(
         "count",
         "Insertion count",
         f"Stacked Counts - Whole Genome - {name}",
-        f"analyses/{name}/{name}_whole_genome_stacked_counts_by_class.pdf",
+        f"analyses/{name}/{name}_whole_genome_stacked_counts_by_class",
         width=width,
         height=height,
     )
@@ -467,7 +484,7 @@ def plot_repeat_family_bars(
         "length",
         "Base pair span",
         f"Stacked Lengths - Whole Genome - {name}",
-        f"analyses/{name}/{name}_whole_genome_stacked_lengths_by_class.pdf",
+        f"analyses/{name}/{name}_whole_genome_stacked_lengths_by_class",
         width=width,
         height=height,
     )
@@ -476,7 +493,7 @@ def plot_repeat_family_bars(
         "count",
         "Insertion count",
         f"Counts by Type - Whole Genome - {name}",
-        f"analyses/{name}/{name}_whole_genome_contiguous_counts_by_class.pdf",
+        f"analyses/{name}/{name}_whole_genome_contiguous_counts_by_class",
         width=width,
         height=height,
     )
@@ -485,7 +502,7 @@ def plot_repeat_family_bars(
         "length",
         "Base pair span",
         f"Lengths by Type - Whole Genome - {name}",
-        f"analyses/{name}/{name}_whole_genome_contiguous_lengths_by_class.pdf",
+        f"analyses/{name}/{name}_whole_genome_contiguous_lengths_by_class",
         width=width,
         height=height,
     )
@@ -513,7 +530,7 @@ def plot_repeat_family_bars(
                 "count",
                 "Insertion count",
                 f"Stacked Counts in chromosome {chrom_names[chrom]} - {name}",
-                f"analyses/{name}/{name}_{chrom_names[chrom]}_stacked_counts_by_class.pdf",
+                f"analyses/{name}/{name}_{chrom_names[chrom]}_stacked_counts_by_class",
                 width=width,
                 height=height,
             )
@@ -522,7 +539,7 @@ def plot_repeat_family_bars(
                 "length",
                 "Base pair span",
                 f"Stacked Lengths in chromosome {chrom_names[chrom]} - {name}",
-                f"analyses/{name}/{name}_{chrom_names[chrom]}_stacked_lengths_by_class.pdf",
+                f"analyses/{name}/{name}_{chrom_names[chrom]}_stacked_lengths_by_class",
                 width=width,
                 height=height,
             )
@@ -531,7 +548,7 @@ def plot_repeat_family_bars(
                 "count",
                 "Insertion count",
                 f"Counts by Type in chromosome {chrom_names[chrom]} - {name}",
-                f"analyses/{name}/{name}_{chrom_names[chrom]}_contiguous_counts_by_class.pdf",
+                f"analyses/{name}/{name}_{chrom_names[chrom]}_contiguous_counts_by_class",
                 width=width,
                 height=height,
             )
@@ -540,7 +557,7 @@ def plot_repeat_family_bars(
                 "length",
                 "Base pair span",
                 f"Lengths by Type in chromosome {chrom_names[chrom]} - {name}",
-                f"analyses/{name}/{name}_{chrom_names[chrom]}_contiguous_lengths_by_class.pdf",
+                f"analyses/{name}/{name}_{chrom_names[chrom]}_contiguous_lengths_by_class",
                 width=width,
                 height=height,
             )
@@ -588,6 +605,8 @@ def plot_karyotype_tracks(
     identity_bed=None,
     layout="horizontal",
     zoom=None,
+    output_formats=None,
+    dpi=300,
 ):
     """
     Run the R script to plot karyotype tracks for repeat annotations.
@@ -596,6 +615,8 @@ def plot_karyotype_tracks(
 
     gc_arg = gc_content if gc_content is not None else "not_displayed"
     accessibility_arg = accessibility if accessibility is not None else "not_displayed"
+    if output_formats is None:
+        output_formats = ["pdf"]
     output_prefix = f"analyses/{name}/{name}_{window_size}"
     input_bed = f"analyses/{name}/karyoplot_tables/{name}_{window_size}_repeat_classes.bed"
 
@@ -628,6 +649,10 @@ def plot_karyotype_tracks(
         str(identity_bed),
         "--layout",
         str(layout),
+        "--output-formats",
+        ",".join(output_formats),
+        "--dpi",
+        str(dpi),
     ]
     if zoom is not None:
         cmd.extend(["--zoom", str(zoom)])
