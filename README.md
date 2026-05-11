@@ -460,7 +460,7 @@ python3 scripts/televizion_cli.py \
   --chromtoplot 2RL,3RL,X
 ```
 
-The CLI computes or reuses:
+The GC-window table path is:
 
 ```text
 data/my_genome/my_genome_gc_windows_10000.tsv
@@ -601,29 +601,6 @@ Zoom coordinates must be whole-number coordinates inside the chromosome bounds
 defined in the genome metadata. When zooming, choose a window size small enough
 that the region contains plotted windows.
 
-### 14. Reuse Existing Karyoplot Tables
-
-If the `analyses/<name>/karyoplot_tables/` files already exist, add
-`--reuse-karyoplot-tables` to skip annotation parsing and table export:
-
-```bash
-python3 scripts/televizion_cli.py \
-  --name MyGenome \
-  --genome data/my_genome/chroms.tsv \
-  --windowsize 500000 \
-  --chromtoplot 2RL,3RL,X \
-  --layout vertical \
-  --reuse-karyoplot-tables
-```
-
-In reuse mode, TEleVIZion regenerates the R karyotype figures from existing tables
-but does not regenerate the Python whole-genome or per-chromosome bar plots.
-The repeat-class table is always required. If neither `--repeatmasker` nor
-`--edta` is provided, TEleVIZion automatically uses an existing Kimura table if
-one is present, otherwise an existing identity table if present. You can still
-pass `--kimura` to require a Kimura table, or `--edta` to require an identity
-table.
-
 ## Output Files
 
 All outputs are written below:
@@ -726,7 +703,7 @@ EDTA identity table:
 <name>_<windowsize>_identity.bed
 ```
 
-The tables are BED-like TSV files intended for plotting and reuse. The exported
+The tables are BED-like TSV files intended for plotting. The exported
 window `start` is 0-based, while `end` is the window end coordinate.
 
 ## Command-Line Options
@@ -742,16 +719,15 @@ window `start` is 0-based, while `end` is the window end coordinate.
     Optional genome FASTA for automatic GC-content windows.
 
 --repeatmasker REPEATMASKER
-    RepeatMasker .out input. Mutually exclusive with --edta. Required unless
-    --reuse-karyoplot-tables is used.
+    RepeatMasker .out input. Mutually exclusive with --edta. One of
+    --repeatmasker or --edta is required.
 
 --edta EDTA
-    EDTA GFF3 input. Mutually exclusive with --repeatmasker. Required unless
-    --reuse-karyoplot-tables is used.
+    EDTA GFF3 input. Mutually exclusive with --repeatmasker. One of
+    --repeatmasker or --edta is required.
 
 --kimura KIMURA
-    RepeatMasker Kimura divergence summary. Use with --repeatmasker. In reuse
-    mode, this requires the existing Kimura karyoplot table.
+    RepeatMasker Kimura divergence summary. Use with --repeatmasker.
 
 --windowsize WINDOWSIZE
     Window size in bp. Default: 10000.
@@ -761,10 +737,6 @@ window `start` is 0-based, while `end` is the window end coordinate.
 
 --perchromosome
     Generate per-chromosome bar plots.
-
---reuse-karyoplot-tables
-    Reuse existing karyoplot tables and skip annotation parsing, table export,
-    and Python summary bar plots.
 
 --classesorder CLASSESORDER
     Comma-separated repeat class order override.

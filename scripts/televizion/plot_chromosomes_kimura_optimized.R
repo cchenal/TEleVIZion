@@ -426,7 +426,7 @@ add_gc_colorbar_horizontal <- function(
 ) {
   left_user <- legend_rect$left + (0.08 * legend_rect$w)
   right_user <- legend_rect$left + (0.92 * legend_rect$w)
-  bottom_user <- legend_rect$top - (0.90 * legend_rect$h)
+  bottom_user <- legend_rect$top - (0.60 * legend_rect$h)
   top_user <- legend_rect$top - (0.35 * legend_rect$h)
 
   left <- grconvertX(left_user, from = "user", to = "ndc")
@@ -458,7 +458,7 @@ add_gc_colorbar_horizontal <- function(
     xlab = title, ylab = "",
     useRaster = TRUE
   )
-  axis(1, at = label_pos, labels = sprintf("%.0f", label_pos * 100), cex.axis = 0.8, tck = -0.5)
+  axis(1, at = label_pos, labels = sprintf("%.0f", label_pos * 100), cex.axis = 0.6, tck = -0.5)
   box()
 }
 
