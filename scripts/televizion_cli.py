@@ -4,6 +4,7 @@ python3 scripts/televizion_cli.py --name MyGenome --genome data/Acol_lib_GCA_943
 """
 
 import argparse
+import os
 
 from televizion import aggregation as televizion_aggregation
 from televizion import io as televizion_io
@@ -16,6 +17,39 @@ def parse_figsize(value):
         return int(width_s), int(height_s)
     except (ValueError, AttributeError):
         raise argparse.ArgumentTypeError("figsize must be in the format W,H (e.g., 10,8).")
+
+
+def infer_class_order_from_table(classes_table):
+    """
+    Infer repeat class order from a TEleVIZion repeat_classes table header.
+    """
+    with open(classes_table, "r") as handle:
+        header = handle.readline().rstrip("\n").split("\t")
+
+    class_order = []
+    for column in header:
+        if column.endswith("_count") and not column.endswith("_count_stacked"):
+            class_order.append(column[: -len("_count")])
+
+    if not class_order:
+        raise ValueError(f"No repeat classes found in {classes_table}.")
+    return class_order
+
+
+def reversed_class_metadata(class_order, class_colors_hex):
+    reversed_classes = ",".join(list(reversed(class_order)))
+    reversed_colors = ",".join(
+        list(reversed([class_colors_hex[cls] for cls in class_order]))
+    )
+    return reversed_classes, reversed_colors
+
+
+def require_existing_table(path, description):
+    if not os.path.isfile(path):
+        raise SystemExit(
+            "Error: --reuse-karyoplot-tables requested, but "
+            f"{description} does not exist: {path}"
+        )
 
 
 def parse_args():
@@ -49,7 +83,7 @@ def parse_args():
         default=None,
         help="RepeatMasker Kimura .divsum file.",
     )
-    input_group = parser.add_mutually_exclusive_group(required=True)
+    input_group = parser.add_mutually_exclusive_group(required=False)
     input_group.add_argument("--repeatmasker", type=str, default=None, help="RepeatMasker .out file.")
     input_group.add_argument("--edta", type=str, default=None, help="EDTA GFF3 annotation file.")
     parser.add_argument(
@@ -67,6 +101,14 @@ def parse_args():
         help="Comma-separated chromosome list or 'all'.",
     )
     parser.add_argument("--perchromosome", action="store_true", help="Generate per-chromosome plots.")
+    parser.add_argument(
+        "--reuse-karyoplot-tables",
+        action="store_true",
+        help=(
+            "Reuse existing analyses/<name>/karyoplot_tables files and skip "
+            "annotation parsing, table export, and Python summary bar plots."
+        ),
+    )
     parser.add_argument(
         "--classesorder",
         required=False,
@@ -132,7 +174,11 @@ def parse_args():
         help="Optional end coordinate for karyotype zoom. Use with --zoom-chromosome and --zoom-start.",
     )
     args = parser.parse_args()
-    if args.kimura is not None and args.repeatmasker is None:
+    if not args.reuse_karyoplot_tables and args.repeatmasker is None and args.edta is None:
+        parser.error("Provide an input file using --repeatmasker or --edta.")
+    if args.kimura is not None and args.edta is not None:
+        parser.error("--kimura cannot be used with --edta.")
+    if args.kimura is not None and args.repeatmasker is None and not args.reuse_karyoplot_tables:
         parser.error("--kimura requires --repeatmasker.")
     zoom_fields = [
         args.zoom_chromosome is not None,
@@ -164,8 +210,8 @@ def main():
         input_path = args.edta
         file_type = "EDTA"
     else:
-        parser = argparse.ArgumentParser()
-        parser.error("Provide an input file using --repeatmasker or --edta.")
+        input_path = None
+        file_type = "reused karyoplot tables"
 
     kimura_file = args.kimura
     window_size = args.windowsize
@@ -174,6 +220,7 @@ def main():
     accessibility = args.accessibility
     per_chrom = args.perchromosome
     per_class = args.perclass
+    reuse_tables = args.reuse_karyoplot_tables
 
     if args.figsize is not None:
         width, height = args.figsize
@@ -211,6 +258,7 @@ def main():
     print(f"- classes order: {classes_order}")
     print(f"- per chromosome: {per_chrom}")
     print(f"- per class: {per_class}")
+    print(f"- reuse karyoplot tables: {reuse_tables}")
     print(f"- figure size: {width}, {height}")
     print(f"- palette: {palette if palette is not None else 'default'}")
     print(f"- layout: {layout}")
@@ -223,6 +271,77 @@ def main():
     print(f"- accessibility: {accessibility}")
     print(f"- gc content: {gc_path}")
     print("\n")
+
+    class_bed = f"analyses/{name}/karyoplot_tables/{name}_{window_size}_repeat_classes.bed"
+    kimura_bed = None
+    identity_bed = None
+
+    if reuse_tables:
+        print("# Reusing existing karyoplot tables\n")
+        print(
+            "Skipping annotation parsing, karyoplot table export, and Python summary "
+            "bar plots for this run.\n"
+        )
+        if per_chrom:
+            print("Warning! --perchromosome is ignored when --reuse-karyoplot-tables is used.\n")
+
+        require_existing_table(class_bed, "repeat class table")
+        table_class_order = infer_class_order_from_table(class_bed)
+        if classes_order is None:
+            class_order = table_class_order
+        else:
+            missing_classes = [cls for cls in classes_order if cls not in table_class_order]
+            if missing_classes:
+                raise SystemExit(
+                    "Error: --classesorder includes class(es) not present in "
+                    f"{class_bed}: {','.join(missing_classes)}"
+                )
+            class_order = classes_order
+
+        _, class_colors_hex = televizion_plotting.build_class_color_maps(
+            class_order=class_order,
+            palette=palette,
+        )
+        reversed_classes, reversed_colors = reversed_class_metadata(
+            class_order=class_order,
+            class_colors_hex=class_colors_hex,
+        )
+
+        kimura_candidate = f"analyses/{name}/karyoplot_tables/{name}_{window_size}_kimura.bed"
+        identity_candidate = f"analyses/{name}/karyoplot_tables/{name}_{window_size}_identity.bed"
+        if kimura_file is not None:
+            kimura_bed = kimura_candidate
+            require_existing_table(kimura_bed, "Kimura table")
+        elif args.edta is not None:
+            require_existing_table(identity_candidate, "identity table")
+            identity_bed = identity_candidate
+        elif args.repeatmasker is not None:
+            if os.path.isfile(identity_candidate):
+                identity_bed = identity_candidate
+        elif os.path.isfile(kimura_candidate):
+            kimura_bed = kimura_candidate
+        elif os.path.isfile(identity_candidate):
+            identity_bed = identity_candidate
+
+        televizion_plotting.plot_karyotype_tracks(
+            name=name,
+            window_size=window_size,
+            genome_file=genome,
+            chromosomes=chromosomes_to_plot,
+            accessibility=accessibility,
+            gc_content=gc_path,
+            classes=reversed_classes,
+            colors=reversed_colors,
+            plot_per_class=per_class,
+            kimura_bed=kimura_bed,
+            identity_bed=identity_bed,
+            layout=layout,
+            zoom=zoom,
+            zoom_chromosome=zoom_chromosome,
+            zoom_start=zoom_start,
+            zoom_end=zoom_end,
+        )
+        return
 
     kimura_div = None
     repeatmasker_identity = None
@@ -279,7 +398,6 @@ def main():
         class_order=class_order,
     )
 
-    kimura_bed = None
     if kimura_file is not None and kimura_div is not None:
         kimura_bed = televizion_aggregation.export_window_kimura_table(
             name=name,
@@ -289,7 +407,6 @@ def main():
             class_order=class_order,
         )
 
-    identity_bed = None
     if args.edta is not None:
         identity_bed = televizion_aggregation.export_window_identity_table(
             name=name,

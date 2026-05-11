@@ -78,6 +78,48 @@ import subprocess
 #     return (agg_global, class_order, class_colors_hex, fam_colors)
 
 
+def build_class_color_maps(class_order, palette=None):
+    """
+    Build class-level color maps from a class order and optional palette.
+
+    Returns:
+        class_colors: RGBA color per class.
+        class_colors_hex: hex color per class.
+    """
+    n = max(len(class_order) - 1, 1)
+    class_colors = {}
+    class_colors_hex = {}
+
+    if palette is None:
+        cmap = plt.get_cmap("turbo")
+        class_colors = {cls: cmap(i / n) for i, cls in enumerate(class_order)}
+        class_colors_hex = {
+            cls: to_hex(rgba, keep_alpha=True) for cls, rgba in class_colors.items()
+        }
+    else:
+        homemade_palette = {}
+        with open(palette, "r") as handle:
+            for line in handle:
+                desc, r, g, b, hex, cat = line.rstrip("\n").split("\t")
+                for category in cat.split(","):
+                    homemade_palette[category] = {
+                        "r": int(r),
+                        "g": int(g),
+                        "b": int(b),
+                        "hex": hex,
+                    }
+        for cls in class_order:
+            class_colors[cls] = [
+                homemade_palette[cls]["r"] / 255,
+                homemade_palette[cls]["g"] / 255,
+                homemade_palette[cls]["b"] / 255,
+                1,
+            ]
+            class_colors_hex[cls] = homemade_palette[cls]["hex"]
+
+    return class_colors, class_colors_hex
+
+
 def build_color_maps(annotations_by_window, classes_order=None, palette=None):
     """
     Build aggregate counts/lengths and color maps for repeat classes/families.
@@ -118,36 +160,11 @@ def build_color_maps(annotations_by_window, classes_order=None, palette=None):
         )
     else:
         class_order = classes_order
-    n = max(len(class_order) - 1, 1)
-
     fam_colors = {}
-    class_colors = {}
-    class_colors_hex = {}
-
-    if palette is None:
-        cmap = plt.get_cmap("turbo")
-        class_colors = {cls: cmap(i / n) for i, cls in enumerate(class_order)}
-        class_colors_hex = {cls: to_hex(rgba, keep_alpha=True) for cls, rgba in class_colors.items()}
-    else:
-        homemade_palette = {}
-        with open(palette, "r") as handle:
-            for line in handle:
-                desc, r, g, b, hex, cat = line.rstrip("\n").split("\t")
-                for category in cat.split(","):
-                    homemade_palette[category] = {
-                        "r": int(r),
-                        "g": int(g),
-                        "b": int(b),
-                        "hex": hex,
-                    }
-        for cls in class_order:
-            class_colors[cls] = [
-                homemade_palette[cls]["r"] / 255,
-                homemade_palette[cls]["g"] / 255,
-                homemade_palette[cls]["b"] / 255,
-                1,
-            ]
-            class_colors_hex[cls] = homemade_palette[cls]["hex"]
+    class_colors, class_colors_hex = build_class_color_maps(
+        class_order=class_order,
+        palette=palette,
+    )
 
     for cls in class_order:
         fams = (
