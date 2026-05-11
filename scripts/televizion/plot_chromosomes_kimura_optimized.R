@@ -31,7 +31,15 @@ option_list <- list(
   make_option(c("-e", "--identity-table"), type="character", default=NULL,
               help="Identity table (EDTA or RepeatMasker without K2p).", metavar="character", dest="identity"),
   make_option(c("--layout"), type="character", default="horizontal",
-              help="Layout mode: horizontal (plot.type=3) or vertical (plot.type=2).", metavar="character")
+              help="Layout mode: horizontal (plot.type=3) or vertical (plot.type=2).", metavar="character"),
+  make_option(c("--zoom"), type="character", default=NULL,
+              help="Optional zoom region as chr:start-end. Default: plot all selected chromosomes.", metavar="character"),
+  make_option(c("--zoom-chromosome"), type="character", default=NULL,
+              help="Optional zoom chromosome. Use with --zoom-start and --zoom-end.", metavar="character", dest="zoom_chromosome"),
+  make_option(c("--zoom-start"), type="double", default=NULL,
+              help="Optional zoom start coordinate. Use with --zoom-chromosome and --zoom-end.", metavar="numeric", dest="zoom_start"),
+  make_option(c("--zoom-end"), type="double", default=NULL,
+              help="Optional zoom end coordinate. Use with --zoom-chromosome and --zoom-start.", metavar="numeric", dest="zoom_end")
 )
 
 opt_parser <- OptionParser(option_list = option_list)
@@ -85,6 +93,105 @@ if (!is.null(opt$identity)) {
 
 cat("\n### CODE ###\n\n")
 
+parse_zoom_region <- function(region) {
+  region <- trimws(region)
+  match <- regexec("^([^:]+):([0-9,]+)-([0-9,]+)$", region)
+  pieces <- regmatches(region, match)[[1]]
+  if (length(pieces) != 4) {
+    stop("Invalid --zoom value. Use chr:start-end, for example chr1:1000000-2000000.", call. = FALSE)
+  }
+  list(
+    chromosome = pieces[2],
+    start = as.numeric(gsub(",", "", pieces[3])),
+    end = as.numeric(gsub(",", "", pieces[4]))
+  )
+}
+
+build_zoom_request <- function(opt) {
+  explicit_zoom_fields <- c(!is.null(opt$zoom_chromosome), !is.null(opt$zoom_start), !is.null(opt$zoom_end))
+  if (!is.null(opt$zoom) && any(explicit_zoom_fields)) {
+    stop("Use either --zoom or --zoom-chromosome/--zoom-start/--zoom-end, not both.", call. = FALSE)
+  }
+  if (!is.null(opt$zoom)) {
+    return(parse_zoom_region(opt$zoom))
+  }
+  if (any(explicit_zoom_fields) && !all(explicit_zoom_fields)) {
+    stop("Use --zoom-chromosome, --zoom-start, and --zoom-end together.", call. = FALSE)
+  }
+  if (all(explicit_zoom_fields)) {
+    return(list(
+      chromosome = trimws(opt$zoom_chromosome),
+      start = opt$zoom_start,
+      end = opt$zoom_end
+    ))
+  }
+  NULL
+}
+
+validate_zoom_request <- function(zoom_request, genome) {
+  if (is.null(zoom_request)) {
+    return(NULL)
+  }
+  if (is.na(zoom_request$start) || is.na(zoom_request$end)) {
+    stop("Zoom start and end must be numeric.", call. = FALSE)
+  }
+  zoom_request$start <- as.numeric(zoom_request$start)
+  zoom_request$end <- as.numeric(zoom_request$end)
+  if (zoom_request$start != floor(zoom_request$start) || zoom_request$end != floor(zoom_request$end)) {
+    stop("Zoom start and end must be whole-number coordinates.", call. = FALSE)
+  }
+  if (zoom_request$start < 1 || zoom_request$end < zoom_request$start) {
+    stop("Zoom coordinates must satisfy 1 <= start <= end.", call. = FALSE)
+  }
+
+  genome_chromosomes <- as.character(seqnames(genome))
+  if (!zoom_request$chromosome %in% genome_chromosomes) {
+    stop(paste0("Zoom chromosome '", zoom_request$chromosome, "' is not present in the genome table."), call. = FALSE)
+  }
+
+  chrom_idx <- which(genome_chromosomes == zoom_request$chromosome)[1]
+  chrom_start <- start(genome)[chrom_idx]
+  chrom_end <- end(genome)[chrom_idx]
+  if (zoom_request$start < chrom_start || zoom_request$end > chrom_end) {
+    stop(
+      paste0(
+        "Zoom coordinates for ", zoom_request$chromosome, " must be within ",
+        chrom_start, "-", chrom_end, "."
+      ),
+      call. = FALSE
+    )
+  }
+  zoom_request
+}
+
+subset_table_to_zoom <- function(dat, zoom_region) {
+  if (is.null(dat) || is.null(zoom_region)) {
+    return(dat)
+  }
+  keep <- dat$chrom == zoom_region$chromosome &
+    dat$end >= zoom_region$start &
+    dat$start <= zoom_region$end
+  dat[keep, , drop = FALSE]
+}
+
+subset_granges_to_zoom <- function(gr, zoom_region) {
+  if (is.null(gr) || is.null(zoom_region)) {
+    return(gr)
+  }
+  keep <- as.character(seqnames(gr)) == zoom_region$chromosome &
+    end(gr) >= zoom_region$start &
+    start(gr) <= zoom_region$end
+  gr[keep]
+}
+
+format_coord <- function(x) {
+  format(x, scientific = FALSE, trim = TRUE)
+}
+
+sanitize_filename <- function(x) {
+  gsub("[^A-Za-z0-9._-]+", "_", x)
+}
+
 # ---- Data
 data <- read.csv(opt$input,  sep = "\t")
 data_kimura <- if (!is.null(opt$kimura)) read.csv(opt$kimura, sep = "\t") else NULL
@@ -93,11 +200,49 @@ name <- opt$name
 
 # ---- Genome / chromosomes
 genome <- toGRanges(opt$genome)
+zoom_region <- validate_zoom_request(build_zoom_request(opt), genome)
 
 chromosome_order <- if (is.character(opt$chromosomes)) {
   unlist(strsplit(opt$chromosomes, ","))
 } else {
   genome@seqinfo@seqnames
+}
+if (!is.null(zoom_region)) {
+  chromosome_order <- zoom_region$chromosome
+  data <- subset_table_to_zoom(data, zoom_region)
+  data_kimura <- subset_table_to_zoom(data_kimura, zoom_region)
+  data_identity <- subset_table_to_zoom(data_identity, zoom_region)
+  accessibility <- subset_granges_to_zoom(accessibility, zoom_region)
+  gccontent <- subset_granges_to_zoom(gccontent, zoom_region)
+  if (nrow(data) == 0) {
+    stop("The zoom region contains no plotted windows. Use a wider interval or a smaller --windowsize.", call. = FALSE)
+  }
+}
+
+zoom_granges <- if (!is.null(zoom_region)) {
+  GRanges(
+    seqnames = zoom_region$chromosome,
+    ranges = IRanges(start = zoom_region$start, end = zoom_region$end)
+  )
+} else {
+  NULL
+}
+zoom_label <- if (!is.null(zoom_region)) {
+  paste0(zoom_region$chromosome, ":", format_coord(zoom_region$start), "-", format_coord(zoom_region$end))
+} else {
+  NULL
+}
+zoom_suffix <- if (!is.null(zoom_region)) {
+  paste0(
+    "_zoom_",
+    sanitize_filename(zoom_region$chromosome),
+    "_",
+    format_coord(zoom_region$start),
+    "_",
+    format_coord(zoom_region$end)
+  )
+} else {
+  ""
 }
 
 names_vec   <- mcols(genome)$name
@@ -112,6 +257,26 @@ plot_type <- if (layout_mode == "vertical") 2 else 3
 n_chr <- length(chromosome_order)
 plot_width <- 11.417
 plot_height <- if (layout_mode == "vertical") 1.2 * n_chr + 2 else 3.937
+
+plot_file <- function(stem) {
+  paste0(opt$output, zoom_suffix, stem)
+}
+
+plot_title <- function(text) {
+  if (is.null(zoom_label)) {
+    paste0(text, " - ", name)
+  } else {
+    paste0(text, " (", zoom_label, ") - ", name)
+  }
+}
+
+safe_max <- function(x) {
+  value <- suppressWarnings(max(x, na.rm = TRUE))
+  if (!is.finite(value) || value <= 0) {
+    return(1)
+  }
+  value
+}
 
 # ---- Kimura
 kimura_cats   <- c("40-70", "30-40", "20-30", "10-20", "0-10")
@@ -145,7 +310,7 @@ make_pp <- function() {
 
 plot_karyo_base <- function() {
   pp <- make_pp()
-  kp <- plotKaryotype(
+  plot_args <- list(
     genome       = genome,
     chromosomes  = chromosome_order,
     plot.type    = plot_type,
@@ -153,6 +318,10 @@ plot_karyo_base <- function() {
     labels.plotter = NULL,
     cytobands = genome
   )
+  if (!is.null(zoom_granges)) {
+    plot_args$zoom <- zoom_granges
+  }
+  kp <- do.call(plotKaryotype, plot_args)
   kpAddChromosomeNames(kp, chr.names = ordered_names, cex = 0.8)
 
   if (!is.null(accessibility)) {
@@ -164,7 +333,8 @@ plot_karyo_base <- function() {
                   col = gccontent$itemRgb, data.panel = "ideogram")
   }
 
-  kpAddBaseNumbers(karyoplot = kp, tick.dist = 10000000, tick.len = 4,
+  tick_dist <- if (is.null(zoom_region)) 10000000 else nice_step(zoom_region$end - zoom_region$start + 1)
+  kpAddBaseNumbers(karyoplot = kp, tick.dist = tick_dist, tick.len = 4,
                    tick.col = "black", cex = 0.5)
 
   if (layout_mode == "vertical") {
@@ -213,7 +383,7 @@ add_axis_counts <- function(kp, overall_max, nticks = 5) {
 
 draw_k2p_panel <- function(kp, dat, cols) {
   for (i in seq_along(cols)) {
-    kpArea(kp, chr = data$chrom, x = data$barycenter, y = dat[[cols[i]]],
+    kpArea(kp, chr = dat$chrom, x = dat$barycenter, y = dat[[cols[i]]],
            col = kimura_colors[i], border = "NA", r0 = 1, r1 = 0, data.panel = 2)
   }
   add_axis_pct(kp, panel = 2, r0 = 1, r1 = 0, labels = c("0%", "50%", "100%"))
@@ -221,7 +391,7 @@ draw_k2p_panel <- function(kp, dat, cols) {
 
 draw_identity_panel <- function(kp, dat, cols) {
   for (i in seq_along(cols)) {
-    kpArea(kp, chr = data$chrom, x = data$barycenter, y = dat[[cols[i]]],
+    kpArea(kp, chr = dat$chrom, x = dat$barycenter, y = dat[[cols[i]]],
            col = identity_colors[i], border = "NA", r0 = 1, r1 = 0, data.panel = 2)
   }
   add_axis_pct(kp, panel = 2, r0 = 1, r1 = 0, labels = c("0%", "50%", "100%"))
@@ -289,7 +459,11 @@ add_legends <- function() {
            border = "grey5", bty = "o", box.lwd = 0.3, title = "Identity",
            cex = 0.8, text.width = twidth, xpd = TRUE)
   }
-  y_gc <- div_leg$rect$top - (1.1 * div_leg$rect$h)
+  if (exists("div_leg", inherits = FALSE)) {
+    y_gc <- div_leg$rect$top - (1.1 * div_leg$rect$h)
+  } else {
+    y_gc <- y_div
+  }
 
   if (!is.null(gccontent)){
     tmp <- c(0, 1)
@@ -305,7 +479,7 @@ add_legends <- function() {
 # =========================================
 
 # ---- All classes (stacked % by class + K2p)
-file <- paste0(opt$output, "_karyoplot_stacked_percentage_by_class.pdf")
+file <- plot_file("_karyoplot_stacked_percentage_by_class.pdf")
 pdf(file, width = plot_width, height = plot_height)
 
 kp <- plot_karyo_base()
@@ -326,7 +500,7 @@ if (!is.null(data_identity)) {
 }
 
 add_legends()
-title(paste0("Percentage of repeated content along chromosomes - ", name),
+title(plot_title("Percentage of repeated content along chromosomes"),
       cex.main = 0.8, line = 2.5)
 
 dev.off()
@@ -335,7 +509,7 @@ dev.off()
 if (!is.null(opt$perclass)) {
   cols_all_pct <- paste0(classes_order, "_pct")
   for (cls in classes_order) {
-    file <- paste0(opt$output, "_karyoplot_percentage_", cls, ".pdf")
+    file <- plot_file(paste0("_karyoplot_percentage_", cls, ".pdf"))
     pdf(file, width = plot_width, height = plot_height)
 
     kp <- plot_karyo_base()
@@ -359,7 +533,7 @@ if (!is.null(opt$perclass)) {
     }
 
     add_legends()
-    title(paste0("Percentage of ", cls, " content along chromosomes - ", name),
+    title(plot_title(paste0("Percentage of ", cls, " content along chromosomes")),
           cex.main = 0.8, line = 2.5)
     dev.off()
   }
@@ -370,13 +544,13 @@ if (!is.null(opt$perclass)) {
 # =========================================
 
 # ---- All classes (stacked counts + K2p)
-file <- paste0(opt$output, "_karyoplot_stacked_counts_by_class.pdf")
+file <- plot_file("_karyoplot_stacked_counts_by_class.pdf")
 pdf(file, width = plot_width, height = plot_height)
 
 kp <- plot_karyo_base()
 
 columns_cnt <- paste0(classes_order, "_count_stacked")
-overall_max <- max(data[, columns_cnt])
+overall_max <- safe_max(data[, columns_cnt])
 for (i in seq_along(columns_cnt)) {
   kpArea(kp, chr = data$chrom, x = data$barycenter, y = data[[columns_cnt[i]]]/overall_max,
          col = colors_order[i], border = "NA", r0 = 0, r1 = 1, data.panel = 1)
@@ -392,7 +566,7 @@ if (!is.null(data_identity)) {
 }
 
 add_legends()
-title(paste0("Number of insertions along chromosomes - ", name),
+title(plot_title("Number of insertions along chromosomes"),
       cex.main = 0.8, line = 2.5)
 
 dev.off()
@@ -400,9 +574,9 @@ dev.off()
 # ---- Per class (counts + K2p), if requested
 if (!is.null(opt$perclass)) {
   cols_all_cnt <- paste0(classes_order, "_count")
-  overall_max <- max(data[, cols_all_cnt])
+  overall_max <- safe_max(data[, cols_all_cnt])
   for (cls in classes_order) {
-    file <- paste0(opt$output, "_karyoplot_counts_", cls, ".pdf")
+    file <- plot_file(paste0("_karyoplot_counts_", cls, ".pdf"))
     pdf(file, width = plot_width, height = plot_height)
 
     kp <- plot_karyo_base()
@@ -421,7 +595,7 @@ if (!is.null(opt$perclass)) {
     }
 
     add_legends()
-    title(paste0("Number of insertions of ", cls, " along chromosomes - ", name),
+    title(plot_title(paste0("Number of insertions of ", cls, " along chromosomes")),
           cex.main = 0.8, line = 2.5)
     dev.off()
   }
