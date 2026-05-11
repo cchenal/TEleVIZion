@@ -588,9 +588,6 @@ def plot_karyotype_tracks(
     identity_bed=None,
     layout="horizontal",
     zoom=None,
-    zoom_chromosome=None,
-    zoom_start=None,
-    zoom_end=None,
 ):
     """
     Run the R script to plot karyotype tracks for repeat annotations.
@@ -634,16 +631,5 @@ def plot_karyotype_tracks(
     ]
     if zoom is not None:
         cmd.extend(["--zoom", str(zoom)])
-    elif zoom_chromosome is not None:
-        cmd.extend(
-            [
-                "--zoom-chromosome",
-                str(zoom_chromosome),
-                "--zoom-start",
-                str(zoom_start),
-                "--zoom-end",
-                str(zoom_end),
-            ]
-        )
     print(shlex.join(cmd))
     subprocess.run(cmd, check=True)

@@ -33,13 +33,7 @@ option_list <- list(
   make_option(c("--layout"), type="character", default="horizontal",
               help="Layout mode: horizontal (plot.type=3) or vertical (plot.type=2).", metavar="character"),
   make_option(c("--zoom"), type="character", default=NULL,
-              help="Optional zoom region as chr:start-end. Default: plot all selected chromosomes.", metavar="character"),
-  make_option(c("--zoom-chromosome"), type="character", default=NULL,
-              help="Optional zoom chromosome. Use with --zoom-start and --zoom-end.", metavar="character", dest="zoom_chromosome"),
-  make_option(c("--zoom-start"), type="double", default=NULL,
-              help="Optional zoom start coordinate. Use with --zoom-chromosome and --zoom-end.", metavar="numeric", dest="zoom_start"),
-  make_option(c("--zoom-end"), type="double", default=NULL,
-              help="Optional zoom end coordinate. Use with --zoom-chromosome and --zoom-start.", metavar="numeric", dest="zoom_end")
+              help="Optional zoom region as chr:start-end. Default: plot all selected chromosomes.", metavar="character")
 )
 
 opt_parser <- OptionParser(option_list = option_list)
@@ -108,22 +102,8 @@ parse_zoom_region <- function(region) {
 }
 
 build_zoom_request <- function(opt) {
-  explicit_zoom_fields <- c(!is.null(opt$zoom_chromosome), !is.null(opt$zoom_start), !is.null(opt$zoom_end))
-  if (!is.null(opt$zoom) && any(explicit_zoom_fields)) {
-    stop("Use either --zoom or --zoom-chromosome/--zoom-start/--zoom-end, not both.", call. = FALSE)
-  }
   if (!is.null(opt$zoom)) {
     return(parse_zoom_region(opt$zoom))
-  }
-  if (any(explicit_zoom_fields) && !all(explicit_zoom_fields)) {
-    stop("Use --zoom-chromosome, --zoom-start, and --zoom-end together.", call. = FALSE)
-  }
-  if (all(explicit_zoom_fields)) {
-    return(list(
-      chromosome = trimws(opt$zoom_chromosome),
-      start = opt$zoom_start,
-      end = opt$zoom_end
-    ))
   }
   NULL
 }

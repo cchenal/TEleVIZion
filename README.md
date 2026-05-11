@@ -570,20 +570,6 @@ python3 scripts/televizion_cli.py \
   --zoom 2RL:10000000-15000000
 ```
 
-Or use the explicit fields:
-
-```bash
-python3 scripts/televizion_cli.py \
-  --name ZoomedRegion \
-  --genome data/my_genome/chroms.tsv \
-  --repeatmasker data/my_genome/repeats.out \
-  --kimura data/my_genome/repeats.divsum \
-  --windowsize 50000 \
-  --zoom-chromosome 2RL \
-  --zoom-start 10000000 \
-  --zoom-end 15000000
-```
-
 Zoom coordinates must be whole-number coordinates inside the chromosome bounds
 defined in the genome metadata. When zooming, choose a window size small enough
 that the region contains plotted windows.
@@ -765,9 +751,6 @@ window `start` is 0-based, while `end` is the window end coordinate.
 
 --zoom CHR:START-END
     Plot one region only.
-
---zoom-chromosome, --zoom-start, --zoom-end
-    Alternative explicit zoom syntax. Use all three together.
 ```
 
 ## Choosing A Window Size

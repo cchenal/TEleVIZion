@@ -152,27 +152,6 @@ def parse_args():
         default=None,
         help="Optional karyotype zoom region as chrom:start-end, e.g. Chr1:1000000-2000000.",
     )
-    parser.add_argument(
-        "--zoom-chromosome",
-        required=False,
-        type=str,
-        default=None,
-        help="Optional chromosome for karyotype zoom. Use with --zoom-start and --zoom-end.",
-    )
-    parser.add_argument(
-        "--zoom-start",
-        required=False,
-        type=int,
-        default=None,
-        help="Optional start coordinate for karyotype zoom. Use with --zoom-chromosome and --zoom-end.",
-    )
-    parser.add_argument(
-        "--zoom-end",
-        required=False,
-        type=int,
-        default=None,
-        help="Optional end coordinate for karyotype zoom. Use with --zoom-chromosome and --zoom-start.",
-    )
     args = parser.parse_args()
     if not args.reuse_karyoplot_tables and args.repeatmasker is None and args.edta is None:
         parser.error("Provide an input file using --repeatmasker or --edta.")
@@ -180,17 +159,6 @@ def parse_args():
         parser.error("--kimura cannot be used with --edta.")
     if args.kimura is not None and args.repeatmasker is None and not args.reuse_karyoplot_tables:
         parser.error("--kimura requires --repeatmasker.")
-    zoom_fields = [
-        args.zoom_chromosome is not None,
-        args.zoom_start is not None,
-        args.zoom_end is not None,
-    ]
-    if args.zoom is not None and any(zoom_fields):
-        parser.error("Use either --zoom or --zoom-chromosome/--zoom-start/--zoom-end, not both.")
-    if any(zoom_fields) and not all(zoom_fields):
-        parser.error("--zoom-chromosome, --zoom-start, and --zoom-end must be used together.")
-    if args.zoom_start is not None and (args.zoom_start < 1 or args.zoom_end < args.zoom_start):
-        parser.error("Zoom coordinates must satisfy 1 <= start <= end.")
     return args
 
 
@@ -230,9 +198,6 @@ def main():
     palette = args.palette
     layout = args.layout
     zoom = args.zoom
-    zoom_chromosome = args.zoom_chromosome
-    zoom_start = args.zoom_start
-    zoom_end = args.zoom_end
 
     windows, chromosomes_to_plot, chrom_names = televizion_aggregation.build_windows(
         genome_file=genome,
@@ -264,8 +229,6 @@ def main():
     print(f"- layout: {layout}")
     if zoom is not None:
         print(f"- karyotype zoom: {zoom}")
-    elif zoom_chromosome is not None:
-        print(f"- karyotype zoom: {zoom_chromosome}:{zoom_start}-{zoom_end}")
     else:
         print("- karyotype zoom: full selected chromosomes")
     print(f"- accessibility: {accessibility}")
@@ -337,9 +300,6 @@ def main():
             identity_bed=identity_bed,
             layout=layout,
             zoom=zoom,
-            zoom_chromosome=zoom_chromosome,
-            zoom_start=zoom_start,
-            zoom_end=zoom_end,
         )
         return
 
@@ -438,9 +398,6 @@ def main():
         identity_bed=identity_bed,
         layout=layout,
         zoom=zoom,
-        zoom_chromosome=zoom_chromosome,
-        zoom_start=zoom_start,
-        zoom_end=zoom_end,
     )
 
 
