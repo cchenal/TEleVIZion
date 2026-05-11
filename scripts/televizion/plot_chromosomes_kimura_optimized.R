@@ -418,27 +418,35 @@ draw_identity_panel <- function(kp, dat, cols) {
 }
 
 add_gc_colorbar_horizontal <- function(
-  legs_width = 1, top = 1, bottom = 1,
+  legend_rect,
   cmap_min = 0.2, cmap_max = 0.8,
   n = 256,
   title = "",
   label_pos = seq(0.2, 0.8, by = 0.1)
 ) {
-  if (layout_mode == "vertical") {
-    left <- x_legs - 0.02
-    right <- x_legs + (0.78 * legs_width)
-    # print(left)
-    # print(right)
-    # print(top)
-    # print(bottom)
-  } else {
-    left <- 0.8
-    right <- 0.91
-    bottom <- 0.3
-    top <- 0.48
+  left_user <- legend_rect$left + (0.08 * legend_rect$w)
+  right_user <- legend_rect$left + (0.92 * legend_rect$w)
+  bottom_user <- legend_rect$top - (0.90 * legend_rect$h)
+  top_user <- legend_rect$top - (0.35 * legend_rect$h)
+
+  left <- grconvertX(left_user, from = "user", to = "ndc")
+  right <- grconvertX(right_user, from = "user", to = "ndc")
+  bottom <- grconvertY(bottom_user, from = "user", to = "ndc")
+  top <- grconvertY(top_user, from = "user", to = "ndc")
+  fig <- pmin(pmax(c(left, right, bottom, top), 0), 1)
+  if (any(is.na(fig)) || fig[1] >= fig[2] || fig[3] >= fig[4]) {
+    return(invisible(NULL))
   }
+
   op <- par(no.readonly = TRUE); on.exit(par(op), add = TRUE)
-  par(new = TRUE, fig = c(left, right, bottom, top), mar = c(2, 1, 1, 1), mgp = c(1.8, 0.2, 0))
+  par(
+    new = TRUE,
+    fig = fig,
+    mar = c(1.5, 0.4, 0.2, 0.4),
+    mgp = c(1.2, 0.2, 0),
+    xaxs = "i",
+    yaxs = "i"
+  )
   x <- seq(cmap_min, cmap_max, length.out = n)
   y <- c(0, 1)
   cols <- rev(hcl.colors(n, "Spectral"))
@@ -468,11 +476,10 @@ add_legends <- function() {
           border = "grey5", bty = "o", box.lwd = 0.3, title = "Repeat class",
           cex = 0.8, text.width = twidth, xpd = TRUE) 
   y_div <- rep_leg$rect$top - (1.05 * rep_leg$rect$h)
-  legs_width <- rep_leg$rect$w
   if (!is.null(data_kimura)) {
     div_leg <- legend(x = x_legs, y = y_div, legend = kimura_cats, fill = kimura_colors,
            border = "grey5", bty = "o", box.lwd = 0.3, title = "K2p",
-           cex = 0.6, text.width = twidth, xpd = TRUE)
+           cex = 0.8, text.width = twidth, xpd = TRUE)
   }
   if (!is.null(data_identity)) {
     div_leg <- legend(x = x_legs, y = y_div, legend = identity_cats, fill = identity_colors,
@@ -487,10 +494,10 @@ add_legends <- function() {
 
   if (!is.null(gccontent)){
     tmp <- c(0, 1)
-    gc_leg <- legend(x = 0.82, y = y_gc, legend = tmp, fill = "white",
+    gc_leg <- legend(x = x_legs, y = y_gc, legend = tmp, fill = "white",
            border = "white", bty = "o", box.lwd = 0.3, title = "GC content (%)", title.col = "grey5", text.col = "white",
            cex = 0.8, text.width = twidth, xpd = TRUE)
-    add_gc_colorbar_horizontal(legs_width = legs_width, top = gc_leg$rect$top - 0.024, bottom = gc_leg$rect$top - gc_leg$rect$h - 0.024)
+    add_gc_colorbar_horizontal(legend_rect = gc_leg$rect)
   }
 }
 
