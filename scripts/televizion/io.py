@@ -421,6 +421,7 @@ def parse_repeatmasker_annotations(repeatmasker_file, windows_dict, kimura_dict=
                         "30-40": 0,
                         "40-70": 0,
                     }
+        missing_kimura_elements = set()
     else:
         # repeatmasker_div = {}
         # for chrom in windows_dict:
@@ -448,13 +449,29 @@ def parse_repeatmasker_annotations(repeatmasker_file, windows_dict, kimura_dict=
                         "0.7-0.6": 0,
                         "0.6-0": 0,
                     }
-                    repeatmasker_id[chrom][window]["Ambiguous"] = {
-                        "1-0.9": 0,
-                        "0.9-0.8": 0,
-                        "0.8-0.7": 0,
-                        "0.7-0.6": 0,
-                        "0.6-0": 0,
-                    }
+                repeatmasker_id[chrom][window]["Ambiguous"] = {
+                    "1-0.9": 0,
+                    "0.9-0.8": 0,
+                    "0.8-0.7": 0,
+                    "0.7-0.6": 0,
+                    "0.6-0": 0,
+                }
+
+    def add_age_bin(chromosome, window, entry, target_class=None):
+        rep_class = target_class or entry["rep_class"]
+        if kimura_dict is not None:
+            kimura_entry = kimura_dict.get(entry["rep_element"])
+            if kimura_entry is None:
+                missing_kimura_elements.add(entry["rep_element"])
+                return
+            kimura_div[chromosome][window][rep_class][
+                kimura_entry["category"]
+            ] += 1
+            return
+
+        repeatmasker_id[chromosome][window][rep_class][
+            id_category((100 - float(entry["divergence"])) / 100)
+        ] += 1
 
     for chromosome in insertions:
         chrom_entries = entries_by_chrom.get(chromosome, [])
@@ -490,17 +507,7 @@ def parse_repeatmasker_annotations(repeatmasker_file, windows_dict, kimura_dict=
                                 "count"
                             ] += 1
                             visited.append(entry["id"])
-                            if (kimura_dict is not None) and (entry["rep_element"] in kimura_dict):
-                                kimura_div[chromosome][window][entry["rep_class"]][
-                                    kimura_dict[entry["rep_element"]]["category"]
-                                ] += 1
-                            else:
-                                # repeatmasker_div[chromosome][window][entry["rep_class"]][
-                                #     divergence_category(entry["divergence"])
-                                # ] += 1
-                                repeatmasker_id[chromosome][window][entry["rep_class"]][
-                                    id_category((100 - float(entry["divergence"])) / 100)
-                                ] += 1
+                            add_age_bin(chromosome, window, entry)
                         insertions[chromosome][window][entry["rep_class"]][entry["rep_family"]][
                             "length"
                         ] += len_bp_to_consider
@@ -517,36 +524,25 @@ def parse_repeatmasker_annotations(repeatmasker_file, windows_dict, kimura_dict=
                         insertions[chromosome][window][rep_class_comp[0]][rep_family_comp[0]][
                             "count"
                         ] += 1
-                        if (kimura_dict is not None) and (entry["rep_element"] in kimura_dict):
-                            kimura_div[chromosome][window][entry["rep_class"]][
-                                kimura_dict[entry["rep_element"]]["category"]
-                            ] += 1
-                        else:
-                            # repeatmasker_div[chromosome][window][entry["rep_class"]][
-                            #     divergence_category(entry["divergence"])
-                            # ] += 1
-                            repeatmasker_id[chromosome][window][entry["rep_class"]][
-                                id_category((100 - float(entry["divergence"])) / 100)
-                            ] += 1
+                        add_age_bin(chromosome, window, entry)
                         insertions[chromosome][window][rep_class_comp[0]][rep_family_comp[0]][
                             "length"
                         ] += len_bp_to_consider
                     else:
                         insertions[chromosome][window]["Ambiguous"]["NA"]["count"] += 1
-                        if (kimura_dict is not None) and (entry["rep_element"] in kimura_dict):
-                            kimura_div[chromosome][window][entry["rep_class"]][
-                                kimura_dict[entry["rep_element"]]["category"]
-                            ] += 1
+                        if kimura_dict is not None:
+                            add_age_bin(chromosome, window, entry)
                         else:
-                            # repeatmasker_div[chromosome][window]["Ambiguous"]][
-                            #     divergence_category(entry["divergence"])
-                            # ] += 1
-                            repeatmasker_id[chromosome][window]["Ambiguous"][
-                               id_category((100 - float(entry["divergence"])) / 100)
-                            ] += 1
+                            add_age_bin(chromosome, window, entry, target_class="Ambiguous")
                         insertions[chromosome][window]["Ambiguous"]["NA"]["length"] += len_bp_to_consider
 
     if kimura_dict is not None:
+        if missing_kimura_elements:
+            print(
+                "Warning! Kimura bins were missing for "
+                f"{len(missing_kimura_elements)} repeat element(s); those insertions "
+                "were excluded from the Kimura panel.\n"
+            )
         return (repeats, insertions, kimura_div)
     else:
         return (repeats, insertions, repeatmasker_id)

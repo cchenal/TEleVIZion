@@ -337,6 +337,12 @@ analyses/MyGenome/
 
 ## Command-Line Use Cases
 
+```
+bsub -M150000 -R"select[mem>150000] rusage[mem=150000] span[hosts=1]" -n 1 -q small -Is conda activate televizion; pwd; python3 scripts/t
+elevizion_cli.py --name AcolN3 --genome data/AcolN3/AcolN3.chroms_names.tsv --fasta data/AcolN3/AcolN3.fasta --repeatmasker data/AcolN3/AcolN3.RM.out --kimura data/AcolN3/AcolN3.RM.kimura --windowsize 50
+00000 --layout vertical; conda deactivate
+```
+
 ### 1. RepeatMasker With Kimura Divergence
 
 Use this when you have RepeatMasker `.out` annotations and a Kimura divergence
@@ -768,9 +774,10 @@ smaller `--windowsize` or a wider zoom interval.
 
 ### RepeatMasker Without Kimura
 
-The practical RepeatMasker path is currently `--repeatmasker` plus `--kimura`.
-For RepeatMasker runs where you want an age/divergence panel, generate the
-RepeatMasker divergence summary first and pass it with `--kimura`.
+RepeatMasker runs work with or without `--kimura`. If `--kimura` is omitted,
+TEleVIZion builds an identity-like panel from the per-insertion percent
+divergence in the `.out` file. If you want the K2P/Kimura panel instead,
+generate the RepeatMasker divergence summary first and pass it with `--kimura`.
 
 ### Matplotlib Cache Warnings
 

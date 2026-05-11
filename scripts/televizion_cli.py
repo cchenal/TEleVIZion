@@ -225,6 +225,7 @@ def main():
     print("\n")
 
     kimura_div = None
+    repeatmasker_identity = None
     if args.repeatmasker is not None:
         if kimura_file is not None:
             kimura_dict = televizion_io.parse_repeatmasker_kimura_bins(
@@ -236,7 +237,11 @@ def main():
                 kimura_dict=kimura_dict,
             )
         else:
-            repeats, insertions = televizion_io.parse_repeatmasker_annotations(
+            (
+                repeats,
+                insertions,
+                repeatmasker_identity,
+            ) = televizion_io.parse_repeatmasker_annotations(
                 repeatmasker_file=input_path,
                 windows_dict=windows,
             )
@@ -290,6 +295,14 @@ def main():
             name=name,
             window_size=window_size,
             annotations_by_window=insertions,
+            windows=windows,
+            class_order=class_order,
+        )
+    elif repeatmasker_identity is not None:
+        identity_bed = televizion_aggregation.export_window_identity_table(
+            name=name,
+            window_size=window_size,
+            annotations_by_window=repeatmasker_identity,
             windows=windows,
             class_order=class_order,
         )
