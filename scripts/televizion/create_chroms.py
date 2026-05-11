@@ -16,7 +16,9 @@ def main():
     parser = argparse.ArgumentParser(
         description="Create chroms.tsv from a FASTA input (using Biopython)."
     )
-    parser.add_argument("fasta", help="Input FASTA file")
+    parser.add_argument(
+        "-f", "--fasta", 
+        help="Input FASTA file")
     parser.add_argument(
         "-o", "--out",
         help="Output TSV path. Default: <input_dir>/chroms.tsv"

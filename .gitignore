@@ -5,3 +5,5 @@ analyses/*
 data/.DS_Store
 data/TEFLoN2/.DS_Store
 data/TEFLoN2/samples/.DS_Store
+
+scripts/televizion/__pycache__/*
