@@ -163,9 +163,9 @@ tab-delimited file with this shape:
 
 ```text
 chr	start	end	name	gieStain
-OX030923.1	1	102883511	2RL	chalk
-OX030924.1	1	84636641	3RL	chalk
-OX030925.1	1	22264324	X	chalk
+OX030893.1	1	28269272	X	chalk
+OX030891.1	1	126027569	2RL	chalk
+OX030892.1	1	95248607	3RL	chalk
 ```
 
 Columns:
@@ -179,14 +179,17 @@ Columns:
 
 The `chr` values must match the sequence IDs in your RepeatMasker `.out` or EDTA
 GFF3 file. The `name` values can be prettier labels, for example using
-`OX030923.1` as the true sequence ID while displaying `2RL` on the plot.
+`OX030891.1` as the true sequence ID while displaying `2RL` on the plot.
 
 You can generate a starter metadata file from a FASTA file:
 
 ```bash
-python3 scripts/televizion/create_chroms.py data/my_genome.fasta \
-  --out data/my_genome/chroms.tsv \
-  --min-length 100000
+python3 scripts/televizion/create_chroms.py \
+    -o data/AcolN3/AcolN3.chroms.tsv \
+    -f data/AcolN3/AcolN3.fasta \
+    --min-length 10000000
+# Wrote: data/AcolN3/AcolN3.chroms.tsv
+# Sequences kept: 3, skipped (< 10000000 bp): 126
 ```
 
 Only use the FASTA-derived file directly if the FASTA IDs match the annotation
