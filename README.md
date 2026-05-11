@@ -523,9 +523,17 @@ python3 scripts/televizion_cli.py \
 Make sure the palette includes each listed class. If you add `Ambiguous` to the
 class order, add an `Ambiguous` category to the palette as well.
 
-### 10. Change Figure Size For Bar Plots
+### 10. Change Figure Size For General Statistics Plots
 
-The `--figsize` option controls the Matplotlib bar plots:
+The `--figsize` option controls only the Python/Matplotlib general statistics
+bar plots:
+
+- whole-genome stacked counts and lengths
+- whole-genome contiguous counts and lengths
+- per-chromosome bar plots generated with `--perchromosome`
+
+It does not affect any R/karyoploteR karyotype PDFs, including the
+`*_karyoplot_*.pdf` outputs.
 
 ```bash
 python3 scripts/televizion_cli.py \
@@ -537,7 +545,7 @@ python3 scripts/televizion_cli.py \
   --figsize 14,8
 ```
 
-Use `W,H` in inches. This does not control the R karyotype PDF dimensions.
+Use `W,H` in inches.
 
 ### 11. Vertical Karyotype Layout
 
@@ -741,7 +749,8 @@ window `start` is 0-based, while `end` is the window end coordinate.
     Optional coloured interval track.
 
 --figsize W,H
-    Matplotlib bar plot size in inches.
+    Python/Matplotlib general statistics bar plot size in inches. This does
+    not affect R/karyoploteR karyotype PDFs.
 
 --palette PALETTE
     TSV palette file for repeat class colours.

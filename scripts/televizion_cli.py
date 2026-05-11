@@ -129,7 +129,10 @@ def parse_args():
         required=False,
         type=parse_figsize,
         default=None,
-        help="Figure size as W,H (e.g., 10,8).",
+        help=(
+            "Figure size as W,H for Python general statistics bar plots only; "
+            "does not affect karyoplots."
+        ),
     )
     parser.add_argument(
         "--palette",
@@ -224,7 +227,7 @@ def main():
     print(f"- per chromosome: {per_chrom}")
     print(f"- per class: {per_class}")
     print(f"- reuse karyoplot tables: {reuse_tables}")
-    print(f"- figure size: {width}, {height}")
+    print(f"- general statistics figure size: {width}, {height}")
     print(f"- palette: {palette if palette is not None else 'default'}")
     print(f"- layout: {layout}")
     if zoom is not None:
