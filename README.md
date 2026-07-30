@@ -100,6 +100,8 @@ At a high level, the CLI performs these steps:
 TEleVIZion uses Python packages plus R/Bioconductor packages. The recommended
 setup is the Conda environment provided in `environment.yml`.
 
+### Option 1: Recommended — Conda
+
 ```bash
 conda env create -f environment.yml
 conda activate televizion
@@ -108,6 +110,44 @@ conda activate televizion
 # mamba env create -f environment.yml
 # mamba activate televizion
 ```
+
+### Option 2: Without Conda
+
+You can also install TEleVIZion without Conda, but this requires managing the Python and R dependencies separately.
+
+Create a Python virtual environment and install the Python packages:
+
+```bash
+python3 -m venv .venv_televizion
+source .venv_televizion/bin/activate
+python -m pip install --upgrade pip
+python -m pip install numpy pandas matplotlib seaborn intervaltree biopython
+```
+
+Then install the R dependencies in your R environment:
+
+* `r-base`
+* `optparse`
+* `karyoploteR`
+* `GenomicRanges`
+* `IRanges`
+
+You will also need a working R installation (`r-base`) on your system before running these commands.
+
+```r
+install.packages("optparse")
+
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install(c(
+    "karyoploteR",
+    "GenomicRanges",
+    "IRanges"
+))
+```
+
+## Check installation
 
 Check that both the Python CLI and the R plotting script are available:
 
@@ -338,9 +378,7 @@ analyses/MyGenome/
 ## Command-Line Use Cases
 
 ```
-bsub -M150000 -R"select[mem>150000] rusage[mem=150000] span[hosts=1]" -n 1 -q small -Is conda activate televizion; pwd; python3 scripts/t
-elevizion_cli.py --name AcolN3 --genome data/AcolN3/AcolN3.chroms_names.tsv --fasta data/AcolN3/AcolN3.fasta --repeatmasker data/AcolN3/AcolN3.RM.out --kimura data/AcolN3/AcolN3.RM.kimura --windowsize 50
-00000 --layout vertical; conda deactivate
+bsub -M150000 -R"select[mem>150000] rusage[mem=150000] span[hosts=1]" -n 1 -q small -Is conda activate televizion; pwd; python3 scripts/televizion_cli.py --name AcolN3 --genome data/AcolN3/AcolN3.chroms_names.tsv --fasta data/AcolN3/AcolN3.fasta --repeatmasker data/AcolN3/AcolN3.RM.out --kimura data/AcolN3/AcolN3.RM.kimura --windowsize 5000000 --layout vertical; conda deactivate
 ```
 
 ### 1. RepeatMasker With Kimura Divergence

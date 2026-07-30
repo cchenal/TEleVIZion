@@ -194,9 +194,9 @@ if (is.na(output_dpi) || output_dpi < 300) {
 }
 
 # ---- Data
-data <- read.csv(opt$input,  sep = "\t")
-data_kimura <- if (!is.null(opt$kimura)) read.csv(opt$kimura, sep = "\t") else NULL
-data_identity <- if (!is.null(opt$identity)) read.csv(opt$identity, sep = "\t") else NULL
+data <- read.csv(opt$input, sep = "\t", check.names = FALSE)
+data_kimura <- if (!is.null(opt$kimura)) read.csv(opt$kimura, sep = "\t", check.names = FALSE) else NULL
+data_identity <- if (!is.null(opt$identity)) read.csv(opt$identity, sep = "\t", check.names = FALSE) else NULL
 name <- opt$name
 
 # ---- Genome / chromosomes
@@ -301,12 +301,12 @@ safe_max <- function(x) {
 # ---- Kimura
 kimura_cats   <- c("40-70", "30-40", "20-30", "10-20", "0-10")
 kimura_colors <- c("#2c699a", "#0db39e", "#83e377", "#efea5a", "#f29e4c")
-kimura_cols_all <- paste0("ALL_", gsub("-", ".", kimura_cats), "_pct_stacked")
+kimura_cols_all <- paste0("ALL_", kimura_cats, "_pct_stacked")
 
 # ---- Identity
 identity_cats   <- c("0.6-0", "0.7-0.6", "0.8-0.7", "0.9-0.8", "1-0.9")
 identity_colors <- c("#2c699a", "#0db39e", "#83e377", "#efea5a", "#f29e4c")
-identity_cols_all <- paste0("ALL_", gsub("-", ".", identity_cats), "_pct_stacked")
+identity_cols_all <- paste0("ALL_", identity_cats, "_pct_stacked")
 
 # ---------------------------
 # Helpers to avoid repetition
@@ -360,7 +360,7 @@ plot_karyo_base <- function() {
   if (layout_mode == "vertical") {
     kpAddLabels(kp, labels = "Repeats", data.panel = 1, cex=0.6, side="left", srt=90, pos=3) # kpAddLabels(kp, labels = "Repeats", data.panel = 1, cex=0.5, side="right", srt=90, pos=3, label.margin = 0.05)
   } else {
-    kpAddLabels(kp, labels = "Repeats", data.panel = 2, cex=0.8)
+    kpAddLabels(kp, labels = "Repeats", data.panel = 1, cex=0.8)
   }
   if (!is.null(data_kimura)) {
     if (layout_mode == "vertical") {
@@ -421,12 +421,11 @@ add_gc_colorbar_horizontal <- function(
   legend_rect,
   cmap_min = 0.2, cmap_max = 0.8,
   n = 256,
-  title = "",
   label_pos = seq(0.2, 0.8, by = 0.1)
 ) {
   left_user <- legend_rect$left + (0.08 * legend_rect$w)
   right_user <- legend_rect$left + (0.92 * legend_rect$w)
-  bottom_user <- legend_rect$top - (0.60 * legend_rect$h)
+  bottom_user <- legend_rect$top - (0.92 * legend_rect$h)
   top_user <- legend_rect$top - (0.35 * legend_rect$h)
 
   left <- grconvertX(left_user, from = "user", to = "ndc")
@@ -442,24 +441,27 @@ add_gc_colorbar_horizontal <- function(
   par(
     new = TRUE,
     fig = fig,
-    mar = c(1.5, 0.4, 0.2, 0.4),
-    mgp = c(1.2, 0.2, 0),
+    mar = c(0, 0, 0, 0),
+    oma = c(0, 0, 0, 0),
     xaxs = "i",
     yaxs = "i"
   )
-  x <- seq(cmap_min, cmap_max, length.out = n)
-  y <- c(0, 1)
+
   cols <- rev(hcl.colors(n, "Spectral"))
-  z <- cbind(x, x)
-  image(
-    x = x, y = y, z = z,
-    col = cols,
-    axes = FALSE,
-    xlab = title, ylab = "",
-    useRaster = TRUE
+  plot.new()
+  plot.window(xlim = c(cmap_min, cmap_max), ylim = c(0, 1))
+  rasterImage(
+    as.raster(matrix(cols, nrow = 1)),
+    xleft = cmap_min,
+    ybottom = 0.40,
+    xright = cmap_max,
+    ytop = 0.85,
+    interpolate = FALSE
   )
-  axis(1, at = label_pos, labels = sprintf("%.0f", label_pos * 100), cex.axis = 0.6, tck = -0.5)
-  box()
+  rect(cmap_min, 0.40, cmap_max, 0.85, border = "black", lwd = 0.5)
+  segments(label_pos, 0.32, label_pos, 0.40, lwd = 0.5, xpd = NA)
+  text(label_pos, 0.14, labels = sprintf("%.0f", label_pos * 100), cex = 0.55, xpd = NA)
+  invisible(NULL)
 }
 
 # Legends 
@@ -473,17 +475,17 @@ if (layout_mode == "vertical") {
 add_legends <- function() {
   twidth <- max(strwidth(classes_order, units = "user"))
   rep_leg <- legend(x = x_legs, y = y_rep, legend = classes_order, fill = colors_order,
-          border = "grey5", bty = "o", box.lwd = 0.3, title = "Repeat class",
+          border = "grey5", bty = "n", title = expression(bold("Repeat class")),
           cex = 0.8, text.width = twidth, xpd = TRUE) 
   y_div <- rep_leg$rect$top - (1.05 * rep_leg$rect$h)
   if (!is.null(data_kimura)) {
     div_leg <- legend(x = x_legs, y = y_div, legend = kimura_cats, fill = kimura_colors,
-           border = "grey5", bty = "o", box.lwd = 0.3, title = "K2p",
+           border = "grey5", bty = "n", title = expression(bold("K2p")),
            cex = 0.8, text.width = twidth, xpd = TRUE)
   }
   if (!is.null(data_identity)) {
     div_leg <- legend(x = x_legs, y = y_div, legend = identity_cats, fill = identity_colors,
-           border = "grey5", bty = "o", box.lwd = 0.3, title = "Identity",
+           border = "grey5", bty = "n", title = expression(bold("Identity")),
            cex = 0.8, text.width = twidth, xpd = TRUE)
   }
   if (exists("div_leg", inherits = FALSE)) {
@@ -495,7 +497,7 @@ add_legends <- function() {
   if (!is.null(gccontent)){
     tmp <- c(0, 1)
     gc_leg <- legend(x = x_legs, y = y_gc, legend = tmp, fill = "white",
-           border = "white", bty = "o", box.lwd = 0.3, title = "GC content (%)", title.col = "grey5", text.col = "white",
+           border = "white", bty = "n", title = expression(bold("GC content (%)")), title.col = "grey5", text.col = "white",
            cex = 0.8, text.width = twidth, xpd = TRUE)
     add_gc_colorbar_horizontal(legend_rect = gc_leg$rect)
   }
@@ -545,12 +547,12 @@ if (!is.null(opt$perclass)) {
       add_axis_pct(kp, panel = 1)
 
       if (!is.null(data_kimura)) {
-        columns <- paste0(cls, "_", gsub("-", ".", kimura_cats), "_pct_stacked")
+        columns <- paste0(cls, "_", kimura_cats, "_pct_stacked")
         draw_k2p_panel(kp, data_kimura, columns)
       }
 
       if (!is.null(data_identity)) {
-        columns <- paste0(cls, "_", gsub("-", ".", identity_cats), "_pct_stacked")
+        columns <- paste0(cls, "_", identity_cats, "_pct_stacked")
         draw_identity_panel(kp, data_identity, columns)
       }
 
@@ -607,7 +609,7 @@ if (!is.null(opt$perclass)) {
       add_axis_counts(kp, overall_max)
 
       if (!is.null(data_kimura)) {
-        columns <- paste0(cls, "_", gsub("-", ".", kimura_cats), "_pct_stacked")
+        columns <- paste0(cls, "_", kimura_cats, "_pct_stacked")
         draw_k2p_panel(kp, data_kimura, columns)
       }
 
