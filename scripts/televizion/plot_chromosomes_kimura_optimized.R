@@ -360,7 +360,7 @@ plot_karyo_base <- function() {
   if (layout_mode == "vertical") {
     kpAddLabels(kp, labels = "Repeats", data.panel = 1, cex=0.6, side="left", srt=90, pos=3) # kpAddLabels(kp, labels = "Repeats", data.panel = 1, cex=0.5, side="right", srt=90, pos=3, label.margin = 0.05)
   } else {
-    kpAddLabels(kp, labels = "Repeats", data.panel = 2, cex=0.8)
+    kpAddLabels(kp, labels = "Repeats", data.panel = 1, cex=0.8)
   }
   if (!is.null(data_kimura)) {
     if (layout_mode == "vertical") {
