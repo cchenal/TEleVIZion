@@ -1,6 +1,6 @@
 .venv_televizion/*
 
-analyses/*
+analyses/legacy
 
 data/*
 
@@ -9,5 +9,5 @@ data/.DS_Store
 data/TEFLoN2/.DS_Store
 data/TEFLoN2/samples/.DS_Store
 
-scripts/televizion/__pycache__/*
-scripts/legacy/*
+scripts/televizion/__pycache__
+scripts/legacy
