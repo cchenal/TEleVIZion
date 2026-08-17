@@ -8,26 +8,6 @@ import numpy as np
 
 from .aggregation import split_overlaps
 
-
-# def compute_gc_content(fasta_file=None, gc_windows=10000):
-#     print("# Running compute_gc_content function\n")
-#
-#     gc_file = "not_displayed"
-#     if fasta_file is not None:
-#         if os.path.isfile(fasta_file):
-#             gc_file = f"{fasta_file[:-6]}_gc_windows_{gc_windows}.tsv"
-#             if not os.path.isfile(gc_file):
-#                 cmd = f"python3 scripts/create_gc_content.py {fasta_file} --window {gc_windows} --out {gc_file}"
-#                 subprocess.run(cmd.split(" "), check=True)
-#             else:
-#                 print(f"GC file already exists! If you want to update it, please delete {gc_file}\n")
-#         else:
-#             print(
-#                 f"Warning! Provided .fasta file ({fasta_file}) doesn't exist -- GC content has not been calculated\n"
-#             )
-#     return gc_file
-
-
 def compute_gc_content(fasta_file=None, gc_windows=10000):
     """
     Compute or reuse GC content windows from a FASTA file.
@@ -50,7 +30,7 @@ def compute_gc_content(fasta_file=None, gc_windows=10000):
     if not os.path.isfile(gc_file):
         cmd = [
             "python3",
-            "scripts/create_gc_content.py",
+            "scripts/utils/create_gc_content.py",
             fasta_file,
             "--window",
             str(gc_windows),
