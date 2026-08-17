@@ -147,7 +147,7 @@ BiocManager::install(c(
 ))
 ```
 
-## Check installation
+### Check installation
 
 Check that both the Python CLI and the R plotting script are available:
 
