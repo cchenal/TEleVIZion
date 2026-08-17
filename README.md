@@ -320,6 +320,10 @@ python3 scripts/televizion_cli.py \
   --chromtoplot OX030923.1,OX030924.1,OX030925.1
 ```
 
+```
+bsub -M50000 -R"select[mem>50000] rusage[mem=50000] span[hosts=1]" -n 1 -q small -Is bash -lc "conda activate televizion && python scripts/televizion_cli.py --name AcolN3 --genome data/AcolN3/AcolN3.chroms_names.tsv --fasta data/AcolN3/AcolN3.fasta --repeatmasker data/AcolN3/AcolN3.RM.out --windowsize 500000 --layout horizontal --chromtoplot OX030891.1,OX030892.1,OX030893.1 --figsize 11,8"
+```
+
 With the default `--output-formats pdf`, this creates:
 
 ```text
