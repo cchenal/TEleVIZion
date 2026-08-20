@@ -2,47 +2,9 @@
 I/O helpers: parse annotation files and read genome metadata.
 """
 
-import os
-import subprocess
 import numpy as np
 
 from .aggregation import split_overlaps
-
-def compute_gc_content(fasta_file=None, gc_windows=10000):
-    """
-    Compute or reuse GC content windows from a FASTA file.
-
-    Returns:
-        gc_file: path to the GC windows TSV, or None if not computed.
-    """
-    print("# Running compute_gc_content function\n")
-
-    if fasta_file is None:
-        return None
-
-    if not os.path.isfile(fasta_file):
-        print(
-            f"Warning! Provided .fasta file ({fasta_file}) doesn't exist -- GC content has not been calculated\n"
-        )
-        return None
-
-    gc_file = f"{fasta_file[:-6]}_gc_windows_{gc_windows}.tsv"
-    if not os.path.isfile(gc_file):
-        cmd = [
-            "python3",
-            "scripts/utils/create_gc_content.py",
-            fasta_file,
-            "--window",
-            str(gc_windows),
-            "--out",
-            gc_file,
-        ]
-        subprocess.run(cmd, check=True)
-    else:
-        print(f"GC file already exists! If you want to update it, please delete {gc_file}\n")
-
-    return gc_file
-
 
 # def parse_repeatmasker_kimura_bins(repeatmasker_kimura_file):
 #     print("# Running parse_repeatmasker_kimura_bins function\n")

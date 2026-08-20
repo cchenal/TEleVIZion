@@ -1,6 +1,13 @@
 .venv_televizion/*
 
-analyses/legacy
+analyses/*
+# analyses/legacy
+# analyses/AcolN3/*
+# analyses/qqMarElec17/*
+# analyses/qqMarElec17_CHR10/*
+# analyses/qqMarMung10/*
+# analyses/qqMarSpei1/*
+# analyses/farm_logs/*
 
 data/*
 

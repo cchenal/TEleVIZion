@@ -741,11 +741,12 @@ def export_window_identity_table(name, window_size, annotations_by_window, windo
     for chrom, win_map in annotations.items():
         for win_label, class_map in win_map.items():
             for rep_class, rep_value in class_map.items():
-                if isinstance(rep_value, dict) and rep_value:
-                    if all(category in rep_value for category in id_cats):
-                        identity_bins = annotations
-                    else:
-                        identity_bins = {}
+                if (
+                    isinstance(rep_value, dict)
+                    and rep_value
+                    and all(category in rep_value for category in id_cats)
+                ):
+                    identity_bins = annotations
                     break
             if identity_bins is not None:
                 break

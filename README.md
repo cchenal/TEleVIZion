@@ -4,7 +4,7 @@ TEleVIZion is a research workflow for visualising transposable element (TE)
 annotations across genomes. It converts RepeatMasker or EDTA output into
 windowed genome summaries, whole-genome bar plots, and chromosome-scale
 karyotype plots that show where repeat classes, repeat families, divergence
-bins, identity bins, GC content, and optional accessibility tracks occur.
+bins, identity bins, GC content, and optional gene-content tracks occur.
 
 The project is designed for exploratory comparative genomics: start from an
 annotated genome, decide which chromosomes or scaffolds you want to inspect,
@@ -34,7 +34,7 @@ TEleVIZion answers questions such as:
 - Are repeats concentrated on particular chromosomes or chromosome arms?
 - Are some regions enriched for young or old repeats?
 - Do repeat-rich windows coincide with GC-rich/GC-poor regions or an external
-  accessibility-like track?
+  gene-content track?
 - How does an EDTA annotation compare with a RepeatMasker annotation when both
   are summarised into the same windowed genome view?
 
@@ -153,12 +153,12 @@ Check that both the Python CLI and the R plotting script are available:
 
 ```bash
 python3 scripts/televizion_cli.py --help
-Rscript scripts/televizion/plot_chromosomes_kimura_optimized.R --help
+Rscript scripts/televizion/plotting_landscape.R --help
 ```
 
 Run commands from the repository root. Several scripts currently use paths such
-as `scripts/create_gc_content.py` and
-`scripts/televizion/plot_chromosomes_kimura_optimized.R` relative to the current
+as `scripts/utils/create_gc_content.py` and
+`scripts/televizion/plotting_landscape.R` relative to the current
 working directory.
 
 ## Repository Layout
@@ -169,14 +169,15 @@ working directory.
 |-- environment.yml
 |-- scripts/
 |   |-- televizion_cli.py
-|   |-- create_gc_content.py
-|   |-- palette.tsv
+|   |-- utils/
+|   |   |-- create_chroms.py
+|   |   |-- create_gc_content.py
+|   |   `-- create_gene_content.py
 |   `-- televizion/
 |       |-- aggregation.py
-|       |-- create_chroms.py
 |       |-- io.py
-|       |-- plotting.py
-|       `-- plot_chromosomes_kimura_optimized.R
+|       |-- plotting_stats.py
+|       `-- plotting_landscape.R
 |-- data/
 |   `-- example input files, if present locally
 `-- analyses/
@@ -186,13 +187,14 @@ working directory.
 The main code paths are:
 
 - `scripts/televizion_cli.py`: command-line orchestration.
-- `scripts/televizion/io.py`: RepeatMasker, Kimura, EDTA, and GC input parsing.
+- `scripts/televizion/io.py`: RepeatMasker, Kimura, and EDTA input parsing.
 - `scripts/televizion/aggregation.py`: genome windows, overlap splitting, and
   table export.
-- `scripts/televizion/plotting.py`: Matplotlib bar plots and calls into R.
-- `scripts/televizion/plot_chromosomes_kimura_optimized.R`: karyotype plots.
-- `scripts/televizion/create_chroms.py`: helper to make `chroms.tsv` from FASTA.
-- `scripts/create_gc_content.py`: helper to make GC-content windows from FASTA.
+- `scripts/televizion/plotting_stats.py`: Matplotlib bar plots and calls into R.
+- `scripts/televizion/plotting_landscape.R`: karyotype plots.
+- `scripts/utils/create_chroms.py`: helper to make `chroms.tsv` from FASTA.
+- `scripts/utils/create_gc_content.py`: helper to make GC-content windows from FASTA.
+- `scripts/utils/create_gene_content.py`: helper to make gene-content windows from GFF.
 
 ## Input Files
 
@@ -224,7 +226,7 @@ GFF3 file. The `name` values can be prettier labels, for example using
 You can generate a starter metadata file from a FASTA file:
 
 ```bash
-python3 scripts/televizion/create_chroms.py \
+python3 scripts/utils/create_chroms.py \
     -o data/AcolN3/AcolN3.chroms.tsv \
     -f data/AcolN3/AcolN3.fasta \
     --min-length 10000000
@@ -293,40 +295,35 @@ TEleVIZion reads these column 9 attributes:
 Records with `identity=NA` are still counted for class/family abundance, but do
 not contribute to identity-bin summaries.
 
-### Genome FASTA For GC Content
+### GC Content Track
 
-The `--fasta` option is optional. If supplied, TEleVIZion computes a GC-content
-track using 10 kb windows:
+Create the GC-content track before running TEleVIZion, then pass its path with `--gc`:
 
 ```bash
-python3 scripts/create_gc_content.py data/my_genome.fasta \
+python3 scripts/utils/create_gc_content.py data/my_genome.fasta \
   --window 10000 \
   --out data/my_genome/my_genome_gc_windows_10000.tsv
 ```
 
-The CLI calls this helper automatically when `--fasta` is provided, reusing the
-existing GC file if it already exists.
-
+`--gc` and `--gene-content` are mutually exclusive; choose one contextual track per run.
 The GC table is tab-delimited:
 
 ```text
 chr	start	end	name	itemRgb
-chr1	0	10000	gc1-0.42	'#66c2a5'
+chr1	0	10000	gc1-0.42	#66c2a5
 ```
 
-### Accessibility Or Other Region Track
+### Gene Content Track
 
-The `--accessibility` option can overlay an external coloured region track on
-the chromosome ideograms. The file should be tab-delimited and compatible with
-`karyoploteR::toGRanges`:
+Create the gene-content track with `scripts/utils/create_gene_content.py`, then pass its path with `--gene-content`. The file is a five-column, tab-delimited coloured track:
 
 ```text
 chr	start	end	name	itemRgb
-2RL	100000	150000	open_1	#2fa7a0
-2RL	500000	525000	closed_1	#e2e2e2
+2RL	0	100000	genes1-12	#6aaed6
+2RL	100000	200000	genes2-7	#bad6eb
 ```
 
-The `chr` values must match the genome metadata.
+The `chr` values must match the genome metadata. Gene content is displayed with a Blues colour bar from 0 to the global maximum genes per window.
 
 ### Palette File
 
@@ -339,10 +336,10 @@ navy	30	58	95	#1e3a5f	DNA
 light_blue	60	200	203	#3cc8cb	LINE
 ```
 
-The bundled `scripts/palette.tsv` follows this six-column format without a
-header. The last column can contain comma-separated class aliases, such as
-`unknown,Undetermined,Unknown`. If you use `--palette`, every class in
-`--classesorder` must be present in the palette's category column.
+The bundled `data/palettes/personalised_palette_example.tsv` follows this
+six-column format without a header. The last column can contain comma-separated
+class aliases, such as `unknown,Undetermined,Unknown`. If you use `--palette`,
+every class in `--classesorder` must be present in the palette's category column.
 
 ## Quick Start
 
@@ -353,7 +350,7 @@ example paths, if they are present in your local checkout:
 python3 scripts/televizion_cli.py \
   --name MyGenome \
   --genome data/Acol_lib_GCA_943734845.1/chroms.tsv \
-  --fasta data/Acol_lib_GCA_943734845.1/GCA_943734845.1.fasta \
+  --gc data/Acol_lib_GCA_943734845.1/GCA_943734845.1_gc_windows_10000.tsv \
   --repeatmasker data/Acol_lib_GCA_943734845.1/GCA_943734845.1.out \
   --kimura data/Acol_lib_GCA_943734845.1/GCA_943734845.1.kimura \
   --windowsize 5000000 \
@@ -361,7 +358,7 @@ python3 scripts/televizion_cli.py \
 ```
 
 ```
-bsub -M50000 -R"select[mem>50000] rusage[mem=50000] span[hosts=1]" -n 1 -q small -Is bash -lc "conda activate televizion && python scripts/televizion_cli.py --name AcolN3 --genome data/AcolN3/AcolN3.chroms_names.tsv --fasta data/AcolN3/AcolN3.fasta --repeatmasker data/AcolN3/AcolN3.RM.out --windowsize 500000 --layout horizontal --chromtoplot OX030891.1,OX030892.1,OX030893.1 --figsize 11,8"
+bsub -M50000 -R"select[mem>50000] rusage[mem=50000] span[hosts=1]" -n 1 -q small -Is bash -lc "conda activate televizion && python scripts/televizion_cli.py --name AcolN3 --genome data/AcolN3/AcolN3.chroms_names.tsv --gc data/AcolN3/AcolN3_gc_windows_10000.tsv --repeatmasker data/AcolN3/AcolN3.RM.out --windowsize 500000 --layout horizontal --chromtoplot OX030891.1,OX030892.1,OX030893.1 --figsize 11,8"
 ```
 
 With the default `--output-formats pdf`, this creates:
@@ -382,7 +379,7 @@ analyses/MyGenome/
 ## Command-Line Use Cases
 
 ```
-bsub -M150000 -R"select[mem>150000] rusage[mem=150000] span[hosts=1]" -n 1 -q small -Is conda activate televizion; pwd; python3 scripts/televizion_cli.py --name AcolN3 --genome data/AcolN3/AcolN3.chroms_names.tsv --fasta data/AcolN3/AcolN3.fasta --repeatmasker data/AcolN3/AcolN3.RM.out --kimura data/AcolN3/AcolN3.RM.kimura --windowsize 5000000 --layout vertical; conda deactivate
+bsub -M150000 -R"select[mem>150000] rusage[mem=150000] span[hosts=1]" -n 1 -q small -Is conda activate televizion; pwd; python3 scripts/televizion_cli.py --name AcolN3 --genome data/AcolN3/AcolN3.chroms_names.tsv --gc data/AcolN3/AcolN3_gc_windows_10000.tsv --repeatmasker data/AcolN3/AcolN3.RM.out --kimura data/AcolN3/AcolN3.RM.kimura --windowsize 5000000 --layout vertical; conda deactivate
 ```
 
 ### 1. RepeatMasker With Kimura Divergence
@@ -440,7 +437,7 @@ python3 scripts/televizion_cli.py \
 ```
 
 For assemblies with many scaffolds, consider filtering the genome metadata file
-or using `scripts/televizion/create_chroms.py --min-length` before plotting.
+or using `scripts/utils/create_chroms.py --min-length` before plotting.
 
 ### 4. Generate Per-Chromosome Summary Bar Plots
 
@@ -462,7 +459,7 @@ Per-chromosome plots are named with the `name` column from the genome metadata,
 for example with the default PDF format:
 
 ```text
-analyses/PerChromosome/PerChromosome_chr2_stacked_counts_by_class.pdf
+analyses/PerChromosome/per_chromosome/PerChromosome_chr2_stacked_counts_by_class.pdf
 ```
 
 ### 5. Generate Per-Class Karyotype Figures
@@ -483,51 +480,44 @@ python3 scripts/televizion_cli.py \
 Example per-class outputs with the default PDF format:
 
 ```text
-analyses/PerClass/PerClass_250000_karyoplot_percentage_LTR.pdf
-analyses/PerClass/PerClass_250000_karyoplot_counts_LTR.pdf
+analyses/PerClass/per_class/PerClass_250000_karyoplot_percentage_LTR.pdf
+analyses/PerClass/per_class/PerClass_250000_karyoplot_counts_LTR.pdf
 ```
 
 ### 6. Include GC Content
 
-Pass the genome FASTA with `--fasta`:
+Pass a precomputed GC-content track with `--gc`:
 
 ```bash
 python3 scripts/televizion_cli.py \
   --name WithGC \
   --genome data/my_genome/chroms.tsv \
-  --fasta data/my_genome/my_genome.fasta \
+  --gc data/my_genome/my_genome_gc_windows_10000.tsv \
   --repeatmasker data/my_genome/repeats.out \
   --kimura data/my_genome/repeats.divsum \
   --windowsize 500000 \
   --chromtoplot 2RL,3RL,X
 ```
 
-The GC-window table path is:
-
-```text
-data/my_genome/my_genome_gc_windows_10000.tsv
-```
-
 The GC track is drawn on the ideogram and a GC colour bar is added to the
 karyotype legend.
 
-### 7. Overlay Accessibility Or Another Coloured Track
+### 7. Include Gene Content
 
-Pass a BED-like region table with `--accessibility`:
+Pass a precomputed gene-content track with `--gene-content`:
 
 ```bash
 python3 scripts/televizion_cli.py \
-  --name WithAccessibility \
+  --name WithGeneContent \
   --genome data/my_genome/chroms.tsv \
   --edta data/my_genome/my_genome.fa.mod.EDTA.TEanno.gff3 \
-  --accessibility data/my_genome/accessibility_windows.tsv \
+  --gene-content data/my_genome/gene_content_windows.tsv \
   --windowsize 500000 \
   --chromtoplot 2RL,3RL,X
 ```
 
-This is useful for visual comparison against external tracks such as accessible
-chromatin, repeat mappability, compartment state, or any precomputed coloured
-interval annotation.
+Generate this track with `scripts/utils/create_gene_content.py`; its chromosome
+IDs must match the genome metadata.
 
 ### 8. Change Class Order
 
@@ -679,13 +669,13 @@ Meaning:
 
 ### Per-Chromosome Summary Plots
 
-Produced only with `--perchromosome`:
+Produced only with `--perchromosome` and written under `per_chromosome/`:
 
 ```text
-<name>_<chromosome_display_name>_stacked_counts_by_class.<format>
-<name>_<chromosome_display_name>_stacked_lengths_by_class.<format>
-<name>_<chromosome_display_name>_contiguous_counts_by_class.<format>
-<name>_<chromosome_display_name>_contiguous_lengths_by_class.<format>
+per_chromosome/<name>_<chromosome_display_name>_stacked_counts_by_class.<format>
+per_chromosome/<name>_<chromosome_display_name>_stacked_lengths_by_class.<format>
+per_chromosome/<name>_<chromosome_display_name>_contiguous_counts_by_class.<format>
+per_chromosome/<name>_<chromosome_display_name>_contiguous_lengths_by_class.<format>
 ```
 
 ### Karyotype Plots
@@ -697,11 +687,11 @@ These figures are always produced:
 <name>_<windowsize>_karyoplot_stacked_counts_by_class.<format>
 ```
 
-With `--perclass`, additional figures are produced:
+With `--perclass`, additional figures are written under `per_class/`:
 
 ```text
-<name>_<windowsize>_karyoplot_percentage_<class>.<format>
-<name>_<windowsize>_karyoplot_counts_<class>.<format>
+per_class/<name>_<windowsize>_karyoplot_percentage_<class>.<format>
+per_class/<name>_<windowsize>_karyoplot_counts_<class>.<format>
 ```
 
 With `--zoom`, the output filename includes a zoom suffix:
@@ -757,8 +747,9 @@ window `start` is 0-based, while `end` is the window end coordinate.
 --genome GENOME
     Required genome metadata TSV.
 
---fasta FASTA
-    Optional genome FASTA for automatic GC-content windows.
+--gc GC
+    Optional precomputed GC-content track from scripts/utils/create_gc_content.py.
+    Mutually exclusive with --gene-content.
 
 --repeatmasker REPEATMASKER
     RepeatMasker .out input. Mutually exclusive with --edta. One of
@@ -786,8 +777,9 @@ window `start` is 0-based, while `end` is the window end coordinate.
 --perclass
     Generate per-class karyotype plots.
 
---accessibility ACCESSIBILITY
-    Optional coloured interval track.
+--gene-content GENE_CONTENT
+    Optional precomputed gene-content track from scripts/utils/create_gene_content.py.
+    Mutually exclusive with --gc. The legend spans 0 to the global maximum.
 
 --figsize W,H
     Python/Matplotlib general statistics bar plot size in inches. This does
@@ -874,7 +866,7 @@ Useful smoke checks:
 
 ```bash
 python3 scripts/televizion_cli.py --help
-Rscript scripts/televizion/plot_chromosomes_kimura_optimized.R --help
+Rscript scripts/televizion/plotting_landscape.R --help
 ```
 
 The generated files in `analyses/` are analysis outputs. Use a unique `--name`

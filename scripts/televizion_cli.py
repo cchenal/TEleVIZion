@@ -7,7 +7,7 @@ import argparse
 
 from televizion import aggregation as televizion_aggregation
 from televizion import io as televizion_io
-from televizion import plotting as televizion_plotting
+from televizion import plotting_stats as televizion_plotting_stats
 
 
 def parse_figsize(value):
@@ -71,7 +71,14 @@ def parse_args():
         type=str,
         help="Genome metadata TSV (chrom, start, end, name).",
     )
-    parser.add_argument("--fasta", required=False, type=str, default=None, help="Genome FASTA.")
+    track_group = parser.add_mutually_exclusive_group(required=False)
+    track_group.add_argument(
+        "--gc",
+        required=False,
+        type=str,
+        default=None,
+        help="Precomputed GC-content track created by scripts/utils/create_gc_content.py. Mutually exclusive with --gene-content.",
+    )
     parser.add_argument(
         "--kimura",
         required=False,
@@ -105,12 +112,12 @@ def parse_args():
         help="Comma-separated class order override.",
     )
     parser.add_argument("--perclass", action="store_true", help="Generate per-class plots.")
-    parser.add_argument(
-        "--accessibility",
+    track_group.add_argument(
+        "--gene-content",
         required=False,
         type=str,
         default=None,
-        help="Accessibility track path for karyotype plotting.",
+        help="Precomputed gene-content track created by scripts/utils/create_gene_content.py. Mutually exclusive with --gc.",
     )
     parser.add_argument(
         "--figsize",
@@ -177,7 +184,7 @@ def main():
 
     name = args.name
     genome = args.genome
-    fasta = args.fasta
+    gc_content = args.gc
 
     if args.repeatmasker is not None:
         input_path = args.repeatmasker
@@ -190,7 +197,7 @@ def main():
     window_size = args.windowsize
     chrom_to_plot = args.chromtoplot if args.chromtoplot != "all" else "all"
     classes_order = args.classesorder.split(",") if args.classesorder is not None else None
-    accessibility = args.accessibility
+    gene_content = args.gene_content
     per_chrom = args.perchromosome
     per_class = args.perclass
     output_formats = args.output_formats
@@ -211,15 +218,12 @@ def main():
         chrom_to_plot=chrom_to_plot,
     )
 
-    gc_path = televizion_io.compute_gc_content(
-        fasta_file=fasta,
-        gc_windows=10000,
-    )
 
     print("\nInputs")
     print(f"- name: {name}")
     print(f"- genome: {genome}")
-    print(f"- fasta: {fasta}")
+    print(f"- gc content: {gc_content}")
+    print(f"- gene content: {gene_content}")
     print(f"- input ({file_type}): {input_path}")
     print(f"- kimura: {kimura_file}")
 
@@ -238,8 +242,6 @@ def main():
         print(f"- karyotype zoom: {zoom}")
     else:
         print("- karyotype zoom: full selected chromosomes")
-    print(f"- accessibility: {accessibility}")
-    print(f"- gc content: {gc_path}")
     print("\n")
 
     kimura_bed = None
@@ -272,13 +274,13 @@ def main():
             windows_dict=windows,
         )
 
-    agg_global, class_order, class_colors_hex, fam_colors = televizion_plotting.build_color_maps(
+    agg_global, class_order, class_colors_hex, fam_colors = televizion_plotting_stats.build_color_maps(
         annotations_by_window=insertions,
         classes_order=classes_order,
         palette=palette,
     )
 
-    televizion_plotting.plot_repeat_family_bars(
+    televizion_plotting_stats.plot_repeat_family_bars(
         name=name,
         annotations_by_window=insertions,
         per_chromosome=per_chrom,
@@ -328,13 +330,13 @@ def main():
             class_order=class_order,
         )
 
-    televizion_plotting.plot_karyotype_tracks(
+    televizion_plotting_stats.plot_karyotype_tracks(
         name=name,
         window_size=window_size,
         genome_file=genome,
         chromosomes=chromosomes_to_plot,
-        accessibility=accessibility,
-        gc_content=gc_path,
+        gene_content=gene_content,
+        gc_content=gc_content,
         classes=reversed_classes,
         colors=reversed_colors,
         plot_per_class=per_class,

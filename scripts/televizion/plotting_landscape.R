@@ -12,10 +12,10 @@ option_list <- list(
               help="Genome table: [chr, start, end, name, gieStain].", metavar="character"),
   make_option(c("-c", "--chromosomes-order"), type="character", default=NULL,
               help="Chromosome order as comma-separated list.", metavar="character", dest="chromosomes"),
-  make_option(c("-a", "--accessibility"), type="character", default="not_displayed",
-              help="Accessibility table: [chr, start, end, name, itemRgb] or 'not_displayed'.", metavar="character"),
+  make_option(c("-a", "--gene-content"), type="character", default="not_displayed",
+              help="Gene content table (mutually exclusive with --gc-content): [chr, start, end, name, itemRgb] or 'not_displayed'.", metavar="character", dest="genecontent"),
   make_option(c("-b", "--gc-content"), type="character", default="not_displayed",
-              help="GC content table: [chr, start, end, name, itemRgb, gc_content] or 'not_displayed'.", metavar="character", dest="gccontent"),
+              help="GC content table (mutually exclusive with --gene-content): [chr, start, end, name, itemRgb] or 'not_displayed'.", metavar="character", dest="gccontent"),
   make_option(c("-i", "--classes-table"), type="character", default=NULL,
               help="Per-window class table: [chr, start, end, <areas>].", metavar="character", dest="input"),
   make_option(c("-k", "--classes-order"), type="character", default=NULL,
@@ -53,6 +53,10 @@ if (is.null(opt$input))       stop("Missing argument: -i <input file>", call. = 
 if (is.null(opt$classesorder)) stop("Missing argument: -k <list,of,classes>", call. = FALSE)
 if (is.null(opt$colorsorder))  stop("Missing argument: -l <list,of,colors>", call. = FALSE)
 if (is.null(opt$output))       stop("Missing argument: -o <output prefix>", call. = FALSE)
+if (!identical(opt$gccontent, "not_displayed") && !identical(opt$genecontent, "not_displayed")) {
+  stop("--gc-content and --gene-content are mutually exclusive; provide only one coloured track.", call. = FALSE)
+}
+
 
 classes_order <- unlist(strsplit(opt$classesorder, ","))
 colors_order  <- unlist(strsplit(opt$colorsorder, ","))
@@ -64,18 +68,72 @@ if (!is.null(opt$perclass)) {
   }
 }
 
+read_coloured_track <- function(path) {
+  first_line <- readLines(path, n = 1, warn = FALSE)
+  if (length(first_line) == 0 || !nzchar(first_line)) {
+    stop(sprintf("Coloured track is empty: %s", path), call. = FALSE)
+  }
+
+  expected_columns <- c("chr", "start", "end", "name", "itemRgb")
+  first_fields <- strsplit(first_line, "\t", fixed = TRUE)[[1]]
+  has_header <- length(first_fields) >= 5 && identical(first_fields[1:5], expected_columns)
+
+  track <- read.delim(
+    path,
+    header = has_header,
+    quote = "",
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+  if (ncol(track) != 5) {
+    stop(
+      sprintf(
+        "Invalid coloured track %s: expected 5 tab-separated columns (chr, start, end, name, itemRgb), found %d.",
+        path,
+        ncol(track)
+      ),
+      call. = FALSE
+    )
+  }
+  colnames(track) <- expected_columns
+  track$start <- suppressWarnings(as.integer(track$start))
+  track$end <- suppressWarnings(as.integer(track$end))
+  if (anyNA(track$start) || anyNA(track$end)) {
+    stop(sprintf("Invalid coordinates in coloured track: %s", path), call. = FALSE)
+  }
+  track$itemRgb <- gsub("\x27", "", track$itemRgb, fixed = TRUE)
+
+  GenomicRanges::makeGRangesFromDataFrame(
+    track,
+    seqnames.field = "chr",
+    start.field = "start",
+    end.field = "end",
+    starts.in.df.are.0based = TRUE,
+    keep.extra.columns = TRUE
+  )
+}
+
 if (!is.null(opt$gccontent)) {
   if (is.character(opt$gccontent) && opt$gccontent %in% c("not_displayed")) {
     gccontent <- NULL
   } else {
-    gccontent <- toGRanges(opt$gccontent)
+    gccontent <- read_coloured_track(opt$gccontent)
   }
 }
 
 
-accessibility <- NULL
-if (!identical(opt$accessibility, "not_displayed")) {
-  accessibility <- toGRanges(opt$accessibility)
+genecontent <- NULL
+gene_content_max <- NULL
+if (!identical(opt$genecontent, "not_displayed")) {
+  genecontent <- read_coloured_track(opt$genecontent)
+  gene_counts <- suppressWarnings(as.integer(sub("^genes[0-9]+-", "", genecontent$name)))
+  if (anyNA(gene_counts) || any(gene_counts < 0)) {
+    stop(
+      "Invalid gene-content names: expected genes<ID>-<non-negative count>, for example genes12-7.",
+      call. = FALSE
+    )
+  }
+  gene_content_max <- max(gene_counts)
 }
 
 if (!is.null(opt$kimura)) {
@@ -213,7 +271,7 @@ if (!is.null(zoom_region)) {
   data <- subset_table_to_zoom(data, zoom_region)
   data_kimura <- subset_table_to_zoom(data_kimura, zoom_region)
   data_identity <- subset_table_to_zoom(data_identity, zoom_region)
-  accessibility <- subset_granges_to_zoom(accessibility, zoom_region)
+  genecontent <- subset_granges_to_zoom(genecontent, zoom_region)
   gccontent <- subset_granges_to_zoom(gccontent, zoom_region)
   if (nrow(data) == 0) {
     stop("The zoom region contains no plotted windows. Use a wider interval or a smaller --windowsize.", call. = FALSE)
@@ -260,7 +318,13 @@ plot_width <- 11.417
 plot_height <- if (layout_mode == "vertical") 1.3 * n_chr + 2 else 3.937
 
 plot_file <- function(stem, output_format) {
-  paste0(opt$output, zoom_suffix, stem, ".", output_format)
+  output_prefix <- opt$output
+  if (grepl("^_karyoplot_(percentage|counts)_", stem)) {
+    per_class_dir <- file.path(dirname(opt$output), "per_class")
+    dir.create(per_class_dir, recursive = TRUE, showWarnings = FALSE)
+    output_prefix <- file.path(per_class_dir, basename(opt$output))
+  }
+  paste0(output_prefix, zoom_suffix, stem, ".", output_format)
 }
 
 open_plot_device <- function(file, output_format) {
@@ -284,9 +348,9 @@ write_plot <- function(stem, plotter) {
 
 plot_title <- function(text) {
   if (is.null(zoom_label)) {
-    paste0(text, " - ", name)
+    paste0(text, " - ", gsub("_", " ", name))
   } else {
-    paste0(text, " (", zoom_label, ") - ", name)
+    paste0(text, " (", zoom_label, ") - ", gsub("_", " ", name))
   }
 }
 
@@ -344,9 +408,9 @@ plot_karyo_base <- function() {
   kp <- do.call(plotKaryotype, plot_args)
   kpAddChromosomeNames(kp, chr.names = ordered_names, cex = 0.8)
 
-  if (!is.null(accessibility)) {
-    kpPlotRegions(karyoplot = kp, data = accessibility,
-                  col = accessibility$itemRgb, data.panel = "ideogram")
+  if (!is.null(genecontent)) {
+    kpPlotRegions(karyoplot = kp, data = genecontent,
+                  col = genecontent$itemRgb, data.panel = "ideogram")
   }
   if (!is.null(gccontent)) {
     kpPlotRegions(karyoplot = kp, data = gccontent,
@@ -464,6 +528,60 @@ add_gc_colorbar_horizontal <- function(
   invisible(NULL)
 }
 
+add_gene_colorbar_horizontal <- function(legend_rect, gene_max, n = 256) {
+  left_user <- legend_rect$left + (0.08 * legend_rect$w)
+  right_user <- legend_rect$left + (0.92 * legend_rect$w)
+  bottom_user <- legend_rect$top - (0.92 * legend_rect$h)
+  top_user <- legend_rect$top - (0.35 * legend_rect$h)
+
+  left <- grconvertX(left_user, from = "user", to = "ndc")
+  right <- grconvertX(right_user, from = "user", to = "ndc")
+  bottom <- grconvertY(bottom_user, from = "user", to = "ndc")
+  top <- grconvertY(top_user, from = "user", to = "ndc")
+  fig <- pmin(pmax(c(left, right, bottom, top), 0), 1)
+  if (any(is.na(fig)) || fig[1] >= fig[2] || fig[3] >= fig[4]) {
+    return(invisible(NULL))
+  }
+
+  op <- par(no.readonly = TRUE); on.exit(par(op), add = TRUE)
+  par(
+    new = TRUE,
+    fig = fig,
+    mar = c(0, 0, 0, 0),
+    oma = c(0, 0, 0, 0),
+    xaxs = "i",
+    yaxs = "i"
+  )
+
+  plot_max <- max(gene_max, 1)
+  label_pos <- if (gene_max == 0) {
+    0
+  } else {
+    ticks <- round(pretty(c(0, gene_max), n = 5))
+    sort(unique(ticks[ticks >= 0 & ticks < gene_max]))
+  }
+  blues_anchors <- c(
+    "#f7fbff", "#deebf7", "#c6dbef", "#9ecae1", "#6baed6",
+    "#4292c6", "#2171b5", "#08519c", "#08306b"
+  )
+  cols <- colorRampPalette(blues_anchors)(n)
+
+  plot.new()
+  plot.window(xlim = c(0, plot_max), ylim = c(0, 1))
+  rasterImage(
+    as.raster(matrix(cols, nrow = 1)),
+    xleft = 0,
+    ybottom = 0.40,
+    xright = plot_max,
+    ytop = 0.85,
+    interpolate = FALSE
+  )
+  rect(0, 0.40, plot_max, 0.85, border = "black", lwd = 0.5)
+  segments(label_pos, 0.32, label_pos, 0.40, lwd = 0.5, xpd = NA)
+  text(label_pos, 0.14, labels = label_pos, cex = 0.55, xpd = NA)
+  invisible(NULL)
+}
+
 # Legends 
 x_legs <- 0.82
 if (layout_mode == "vertical") {
@@ -494,12 +612,18 @@ add_legends <- function() {
     y_gc <- y_div
   }
 
-  if (!is.null(gccontent)){
+  if (!is.null(gccontent)) {
     tmp <- c(0, 1)
     gc_leg <- legend(x = x_legs, y = y_gc, legend = tmp, fill = "white",
            border = "white", bty = "n", title = expression(bold("GC content (%)")), title.col = "grey5", text.col = "white",
            cex = 0.8, text.width = twidth, xpd = TRUE)
     add_gc_colorbar_horizontal(legend_rect = gc_leg$rect)
+  } else if (!is.null(genecontent)) {
+    tmp <- c(0, 1)
+    gene_leg <- legend(x = x_legs, y = y_gc, legend = tmp, fill = "white",
+           border = "white", bty = "n", title = expression(bold("Gene content (count)")), title.col = "grey5", text.col = "white",
+           cex = 0.8, text.width = twidth, xpd = TRUE)
+    add_gene_colorbar_horizontal(legend_rect = gene_leg$rect, gene_max = gene_content_max)
   }
 }
 
@@ -611,6 +735,10 @@ if (!is.null(opt$perclass)) {
       if (!is.null(data_kimura)) {
         columns <- paste0(cls, "_", kimura_cats, "_pct_stacked")
         draw_k2p_panel(kp, data_kimura, columns)
+      }
+      if (!is.null(data_identity)) {
+        columns <- paste0(cls, "_", identity_cats, "_pct_stacked")
+        draw_identity_panel(kp, data_identity, columns)
       }
 
       add_legends()
