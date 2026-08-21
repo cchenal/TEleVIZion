@@ -58,9 +58,12 @@ def parse_args():
         "  EDTA:\n"
         "    python3 scripts/televizion_cli.py --name MyGenome --genome data/genome.tsv \\\n"
         "      --edta data/edta.gff3 --windowsize 500000 --chromtoplot 2RL,3RL,X\n"
+        "  TRASH:\n"
+        "    python3 scripts/televizion_cli.py --name MyGenome --genome data/genome.tsv \\\n"
+        "      --trash data/trash_summary.csv --windowsize 500000 --chromtoplot chr1,chr2\n"
     )
     parser = argparse.ArgumentParser(
-        description="Generate TEleVIZion plots and tables from RepeatMasker or EDTA annotations.",
+        description="Generate TEleVIZion plots and tables from RepeatMasker, EDTA, or TRASH annotations.",
         epilog=epilog,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -89,6 +92,7 @@ def parse_args():
     input_group = parser.add_mutually_exclusive_group(required=False)
     input_group.add_argument("--repeatmasker", type=str, default=None, help="RepeatMasker .out file.")
     input_group.add_argument("--edta", type=str, default=None, help="EDTA GFF3 annotation file.")
+    input_group.add_argument("--trash", type=str, default=None, help="TRASH summary CSV annotation file.")
     parser.add_argument(
         "--windowsize",
         required=False,
@@ -168,10 +172,10 @@ def parse_args():
         help="Optional karyotype zoom region as chrom:start-end, e.g. Chr1:1000000-2000000.",
     )
     args = parser.parse_args()
-    if args.repeatmasker is None and args.edta is None:
-        parser.error("Provide an input file using --repeatmasker or --edta.")
-    if args.kimura is not None and args.edta is not None:
-        parser.error("--kimura cannot be used with --edta.")
+    if args.repeatmasker is None and args.edta is None and args.trash is None:
+        parser.error(
+            "Provide an input file using --repeatmasker, --edta, or --trash."
+        )
     if args.kimura is not None and args.repeatmasker is None:
         parser.error("--kimura requires --repeatmasker.")
     return args
@@ -192,6 +196,9 @@ def main():
     elif args.edta is not None:
         input_path = args.edta
         file_type = "EDTA"
+    else:
+        input_path = args.trash
+        file_type = "TRASH"
 
     kimura_file = args.kimura
     window_size = args.windowsize
@@ -268,9 +275,14 @@ def main():
                 repeatmasker_file=input_path,
                 windows_dict=windows,
             )
-    else:
+    elif args.edta is not None:
         repeats, insertions = televizion_io.parse_edta_annotations(
             edta_file=input_path,
+            windows_dict=windows,
+        )
+    else:
+        repeats, insertions = televizion_io.parse_trash_annotations(
+            trash_file=input_path,
             windows_dict=windows,
         )
 
@@ -289,6 +301,7 @@ def main():
         class_order=class_order,
         class_colors_hex=class_colors_hex,
         fam_colors=fam_colors,
+        show_legends=args.trash is None,
         width=width,
         height=height,
         output_formats=output_formats,
@@ -304,6 +317,19 @@ def main():
         class_order=class_order,
     )
 
+    legend_classes = None
+    legend_colors = None
+    if args.trash is not None:
+        ranked_trash_classes = (
+            agg_global.groupby("rep_class")["length"]
+            .sum()
+            .sort_values(ascending=False)
+            .index.tolist()
+        )
+        top_trash_classes = ranked_trash_classes[:10]
+        legend_classes = ",".join(top_trash_classes)
+        legend_colors = ",".join(class_colors_hex[cls] for cls in top_trash_classes)
+
     if kimura_file is not None and kimura_div is not None:
         kimura_bed = televizion_aggregation.export_window_kimura_table(
             name=name,
@@ -313,7 +339,7 @@ def main():
             class_order=class_order,
         )
 
-    if args.edta is not None:
+    if args.edta is not None or args.trash is not None:
         identity_bed = televizion_aggregation.export_window_identity_table(
             name=name,
             window_size=window_size,
@@ -340,6 +366,8 @@ def main():
         classes=reversed_classes,
         colors=reversed_colors,
         plot_per_class=per_class,
+        legend_classes=legend_classes,
+        legend_colors=legend_colors,
         kimura_bed=kimura_bed,
         identity_bed=identity_bed,
         layout=layout,

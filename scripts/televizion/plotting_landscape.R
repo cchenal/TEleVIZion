@@ -24,6 +24,10 @@ option_list <- list(
               help="Generate per-class plots (use 'True').", metavar="character", dest="perclass"),
   make_option(c("-l", "--colors-order"), type="character", default=NULL,
               help="Class color order (comma-separated, reversed for display).", metavar="character", dest="colorsorder"),
+  make_option(c("--legend-classes"), type="character", default=NULL,
+              help="Optional comma-separated subset of classes shown in the repeat-class legend.", metavar="character", dest="legend_classes"),
+  make_option(c("--legend-colors"), type="character", default=NULL,
+              help="Colors corresponding to --legend-classes.", metavar="character", dest="legend_colors"),
   make_option(c("-o", "--output"), type="character", default=NULL,
               help="Output prefix path.", metavar="character"),
   make_option(c("--output-formats"), type="character", default="pdf",
@@ -60,6 +64,11 @@ if (!identical(opt$gccontent, "not_displayed") && !identical(opt$genecontent, "n
 
 classes_order <- unlist(strsplit(opt$classesorder, ","))
 colors_order  <- unlist(strsplit(opt$colorsorder, ","))
+legend_classes <- if (is.null(opt$legend_classes)) classes_order else unlist(strsplit(opt$legend_classes, ","))
+legend_colors <- if (is.null(opt$legend_colors)) colors_order else unlist(strsplit(opt$legend_colors, ","))
+if (length(legend_classes) != length(legend_colors)) {
+  stop("--legend-classes and --legend-colors must contain the same number of values.", call. = FALSE)
+}
 
 # ---- Normalize flags that come as strings
 if (!is.null(opt$perclass)) {
@@ -316,6 +325,7 @@ plot_type <- if (layout_mode == "vertical") 2 else 3
 n_chr <- length(chromosome_order)
 plot_width <- 11.417
 plot_height <- if (layout_mode == "vertical") 1.3 * n_chr + 2 else 3.937
+plot_font_family <- "DejaVu Sans"
 
 plot_file <- function(stem, output_format) {
   output_prefix <- opt$output
@@ -329,11 +339,11 @@ plot_file <- function(stem, output_format) {
 
 open_plot_device <- function(file, output_format) {
   if (output_format == "pdf") {
-    pdf(file, width = plot_width, height = plot_height)
+    cairo_pdf(file, width = plot_width, height = plot_height, family = plot_font_family)
   } else if (output_format == "png") {
-    png(file, width = plot_width, height = plot_height, units = "in", res = output_dpi)
+    png(file, width = plot_width, height = plot_height, units = "in", res = output_dpi, type = "cairo")
   } else if (output_format == "jpg") {
-    jpeg(file, width = plot_width, height = plot_height, units = "in", res = output_dpi, quality = 95)
+    jpeg(file, width = plot_width, height = plot_height, units = "in", res = output_dpi, quality = 95, type = "cairo")
   }
 }
 
@@ -341,6 +351,7 @@ write_plot <- function(stem, plotter) {
   for (output_format in output_formats) {
     file <- plot_file(stem, output_format)
     open_plot_device(file, output_format)
+    par(family = plot_font_family)
     plotter()
     dev.off()
   }
@@ -364,12 +375,14 @@ safe_max <- function(x) {
 
 # ---- Kimura
 kimura_cats   <- c("40-70", "30-40", "20-30", "10-20", "0-10")
-kimura_colors <- c("#2c699a", "#0db39e", "#83e377", "#efea5a", "#f29e4c")
+# kimura_colors <- c("#2c699a", "#0db39e", "#83e377", "#efea5a", "#f29e4c")
+kimura_colors <- c("#4146ac", "#18e0bd", "#6dfe62", "#e5d938", "#fea933")
 kimura_cols_all <- paste0("ALL_", kimura_cats, "_pct_stacked")
 
 # ---- Identity
 identity_cats   <- c("0.6-0", "0.7-0.6", "0.8-0.7", "0.9-0.8", "1-0.9")
-identity_colors <- c("#2c699a", "#0db39e", "#83e377", "#efea5a", "#f29e4c")
+# identity_colors <- c("#2c699a", "#0db39e", "#83e377", "#efea5a", "#f29e4c")
+identity_colors <- c("#4146ac", "#18e0bd", "#6dfe62", "#e5d938", "#fea933")
 identity_cols_all <- paste0("ALL_", identity_cats, "_pct_stacked")
 
 # ---------------------------
@@ -591,8 +604,8 @@ if (layout_mode == "vertical") {
 }
 
 add_legends <- function() {
-  twidth <- max(strwidth(classes_order, units = "user"))
-  rep_leg <- legend(x = x_legs, y = y_rep, legend = classes_order, fill = colors_order,
+  twidth <- max(strwidth(legend_classes, units = "user"))
+  rep_leg <- legend(x = x_legs, y = y_rep, legend = legend_classes, fill = legend_colors,
           border = "grey5", bty = "n", title = expression(bold("Repeat class")),
           cex = 0.8, text.width = twidth, xpd = TRUE) 
   y_div <- rep_leg$rect$top - (1.05 * rep_leg$rect$h)

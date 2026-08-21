@@ -71,9 +71,9 @@ def parse_args():
         ),
     )
     parser.add_argument(
-        "--gieStain", default="black",
+        "--gieStain", default="gneg",
         metavar="LABEL",
-        help='Value written to the gieStain column. Default: "black".'
+        help='Value written to the gieStain column. Default: "gneg".'
     )
     parser.add_argument(
         "--min-length", type=int, default=0,

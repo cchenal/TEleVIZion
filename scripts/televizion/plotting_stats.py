@@ -11,6 +11,10 @@ import matplotlib.patches as mpatches
 from matplotlib.colors import to_hex
 import subprocess
 
+
+plt.rcParams["font.family"] = "DejaVu Sans"
+
+
 def build_class_color_maps(class_order, palette=None):
     """
     Build class-level color maps from a class order and optional palette.
@@ -133,6 +137,7 @@ def plot_repeat_family_bars(
     class_colors_hex,
     fam_colors,
     per_chromosome=False,
+    show_legends=True,
     width=10,
     height=8,
     output_formats=None,
@@ -184,14 +189,15 @@ def plot_repeat_family_bars(
         ax.set_xlabel("Repeat class", weight="bold", labelpad=12)
         ax.set_ylabel(ylabel, weight="bold", labelpad=12)
         ax.set_title(title, weight="bold", pad=20)
-        ax.legend(
-            handles=handles,
-            title="Type",
-            loc="upper left",
-            bbox_to_anchor=(1.05, 1),
-            ncol=1,
-            fontsize="small",
-        )
+        if show_legends:
+            ax.legend(
+                handles=handles,
+                title="Type",
+                loc="upper left",
+                bbox_to_anchor=(1.05, 1),
+                ncol=1,
+                fontsize="small",
+            )
         plt.tight_layout()
         save_figure(fig, output_stem, output_formats, dpi=dpi)
         plt.close(fig)
@@ -223,7 +229,8 @@ def plot_repeat_family_bars(
         ax.set_ylabel("Repeat type", weight="bold", labelpad=12)
         ax.set_title(title, weight="bold", pad=20)
         legend_handles = [mpatches.Patch(color=class_colors_hex[cls], label=cls) for cls in class_list]
-        ax.legend(handles=legend_handles, title="Repeat class", loc="best", ncol=1, fontsize="small")
+        if show_legends:
+            ax.legend(handles=legend_handles, title="Repeat class", loc="best", ncol=1, fontsize="small")
         plt.tight_layout()
         save_figure(fig, output_stem, output_formats, dpi=dpi)
         plt.close(fig)
@@ -332,6 +339,8 @@ def plot_karyotype_tracks(
     classes,
     colors,
     plot_per_class,
+    legend_classes=None,
+    legend_colors=None,
     kimura_bed=None,
     identity_bed=None,
     layout="horizontal",
@@ -387,5 +396,10 @@ def plot_karyotype_tracks(
     ]
     if zoom is not None:
         cmd.extend(["--zoom", str(zoom)])
+    if legend_classes is not None and legend_colors is not None:
+        cmd.extend([
+            "--legend-classes", str(legend_classes),
+            "--legend-colors", str(legend_colors),
+        ])
     print(shlex.join(cmd))
     subprocess.run(cmd, check=True)
