@@ -1,6 +1,6 @@
 # TEleVIZion
 
-TEleVIZion is a research workflow for visualising transposable element (TE) and repeat annotations across genomes. This version  converts **RepeatMasker**, **EDTA** or **TRASH** output into windowed genome summaries, whole-genome bar plots, and chromosome-scale karyotype plots.
+TEleVIZion is a research workflow for visualising transposable element (TE) and repeat annotations across genomes. This version converts **RepeatMasker**, **EDTA** or **TRASH** output into windowed genome summaries, whole-genome bar plots, and chromosome-scale karyotype plots **in a single command-line**.
 
 TEleVIZion is designed for exploratory and comparative genomics: choose the chromosomes or scaffolds you want to inspect, select an appropriate window size, and generate a consistent set of figures and reusable intermediate tables. TEleVIZion can help answer questions such as:
 
@@ -22,7 +22,7 @@ The workflow supports:
 - Regional zooming.
 - PDF, PNG, and JPG output.
 
-TEleVIZion does **not** run annotation tools; TEleVIZion consumes their output.
+TEleVIZion does **not** run annotation tools; it consumes their output.
 
 ---
 
@@ -33,12 +33,11 @@ TEleVIZion does **not** run annotation tools; TEleVIZion consumes their output.
 - [How the workflow works](#how-the-workflow-works)
 - [Inputs](#inputs)
 - [Command-line options](#command-line-options)
-- [Common use cases](#common-use-cases)
+- [Common use cases and tutorial](#common-use-cases-and-tutorial)
 - [Output files](#output-files)
 - [Repository layout](#repository-layout)
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
-- [Tutorial](TUTORIAL.md)
 
 ---
 
@@ -362,26 +361,28 @@ The CLI options fall naturally into four groups:
 
 ### Full option reference
 
-| Option | Required? | Value / format | Default | Purpose | Notes / constraints |
-|---|---|---|---|---|---|
-| `--name` | No | string | `output` | Sets the run name and output prefix. | Outputs are grouped under the corresponding analysis directory. |
-| `--genome` | **Yes** | path to TSV | — | Genome metadata defining chromosome/scaffold coordinates and display names. | Chromosome IDs must correspond to those in the TE annotation. |
-| `--repeatmasker` | **One of RM / EDTA** | path to `.out` | — | Uses RepeatMasker annotation as TE input. | Mutually exclusive with `--edta`; required when `--kimura` is used. |
-| `--edta` | **One of RM / EDTA** | path to GFF3 | — | Uses EDTA annotation as TE input. | Mutually exclusive with `--repeatmasker`; cannot be combined with `--kimura`. |
-| `--kimura` | No | path to divergence summary | — | Adds RepeatMasker Kimura divergence information. | Only valid with `--repeatmasker`. |
-| `--windowsize` | No | integer, bp | `10000` | Sets the genomic aggregation window size. | Smaller windows increase spatial resolution and table size. |
-| `--chromtoplot` | No | comma-separated IDs or `all` | `all` | Selects chromosomes/scaffolds for karyotype plotting. | Uses `chr` IDs, not display names unless they are identical. |
-| `--gc` | No | path to TSV | — | Adds a precomputed GC-content track. | Mutually exclusive with `--gene-content`. |
-| `--gene-content` | No | path to TSV | — | Adds a precomputed gene-content track. | Mutually exclusive with `--gc`. |
-| `--perchromosome` | No | flag | off | Generates general-statistics plots for each chromosome/scaffold. | Add the flag without a value to enable it. |
-| `--perclass` | No | flag | off | Generates additional karyotype figures for individual repeat classes. | Add the flag without a value to enable it. |
-| `--classesorder` | No | comma-separated classes | automatic | Overrides repeat-class ordering. | Include every class you want retained in ordered plots/tables. |
-| `--palette` | No | path to TSV | built-in colours | Overrides the default repeat-class colours. | Useful for consistent colours across analyses. |
-| `--figsize` | No | `W,H` | `10,8` | Sets Python general-statistics plot size in inches. | Values are parsed as integers. Does not affect karyoploteR figures. |
-| `--output-formats` | No | comma-separated `pdf`, `png`, `jpg` | `pdf` | Selects one or more figure formats. | Values are case-insensitive and duplicates are removed. |
-| `--dpi` | No | integer >= 300 | `300` | Sets raster output resolution. | Applies to PNG/JPG; values below 300 are rejected. |
-| `--layout` | No | `horizontal` or `vertical` | `horizontal` | Sets karyotype chromosome arrangement. | Use `vertical` to stack chromosomes vertically. |
-| `--zoom` | No | `chrom:start-end` | — | Restricts karyotype plotting to a genomic interval. | Example: `Chr1:1000000-2000000`. |
+| Option             | Required?                              | Value / format                      | Default          | Purpose                                                                                            | Notes / constraints                                                                                    |
+| ------------------ | -------------------------------------- | ----------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `--name`           | No                                     | string                              | `output`         | Sets the run name and output prefix.                                                               | Outputs are grouped under the corresponding analysis directory.                                        |
+| `--genome`         | **Yes**                                | path to TSV                         | —                | Genome metadata defining chromosome/scaffold coordinates and display names.                        | Chromosome IDs must correspond to those in the repeat annotation.                                      |
+| `--repeatmasker`   | **One of RepeatMasker / EDTA / TRASH** | path to `.out`                      | —                | Uses RepeatMasker annotations as repeat input.                                                     | Mutually exclusive with `--edta` and `--trash`. Required when `--kimura` is used.                      |
+| `--edta`           | **One of RepeatMasker / EDTA / TRASH** | path to GFF3                        | —                | Uses EDTA annotations as repeat input.                                                             | Mutually exclusive with `--repeatmasker` and `--trash`. Cannot be combined with `--kimura`.            |
+| `--trash`          | **One of RepeatMasker / EDTA / TRASH** | path to CSV                         | —                | Uses a TRASH summary file as repeat input.                                                         | Mutually exclusive with `--repeatmasker` and `--edta`. Cannot be combined with `--kimura`.             |
+| `--kimura`         | No                                     | path to `.divsum`                   | —                | Adds RepeatMasker Kimura divergence information.                                                   | Only valid with `--repeatmasker`.                                                                      |
+| `--windowsize`     | No                                     | integer, bp                         | `10000`          | Sets the genomic aggregation window size.                                                          | Smaller windows increase spatial resolution but also increase table size and plotting time.            |
+| `--chromtoplot`    | No                                     | comma-separated IDs or `all`        | `all`            | Selects chromosomes/scaffolds for karyotype plotting.                                              | Uses chromosome IDs from the genome metadata rather than display names, unless they are identical.     |
+| `--gc`             | No                                     | path to TSV                         | —                | Adds a precomputed GC-content track.                                                               | Mutually exclusive with `--gene-content`.                                                              |
+| `--gene-content`   | No                                     | path to TSV/BED-like track          | —                | Adds a precomputed gene-content track.                                                             | Mutually exclusive with `--gc`.                                                                        |
+| `--perchromosome`  | No                                     | flag                                | off              | Generates general-statistics plots for each chromosome/scaffold in addition to whole-genome plots. | Add the flag without a value to enable it.                                                             |
+| `--perclass`       | No                                     | flag                                | off              | Generates additional karyotype figures for individual repeat classes.                              | Add the flag without a value to enable it.                                                             |
+| `--classesorder`   | No                                     | comma-separated classes             | automatic        | Overrides the automatically determined repeat-class order.                                         | The supplied string is split on commas. Include every class you want retained in ordered plots/tables. |
+| `--palette`        | No                                     | path to TSV                         | built-in colours | Overrides the default repeat-class colours.                                                        | Useful for keeping class colours consistent across analyses.                                           |
+| `--figsize`        | No                                     | `W,H`                               | `10,8`           | Sets the size, in inches, of Python general-statistics bar plots.                                  | Width and height must be integers. Does not affect karyotype plots.                                    |
+| `--output-formats` | No                                     | comma-separated `pdf`, `png`, `jpg` | `pdf`            | Selects one or more figure output formats.                                                         | Values are case-insensitive, whitespace is stripped, and duplicate formats are removed.                |
+| `--dpi`            | No                                     | integer ≥ 300                       | `300`            | Sets raster output resolution in dots per inch.                                                    | Applies to raster output such as PNG/JPG; values below 300 are rejected.                               |
+| `--layout`         | No                                     | `horizontal` or `vertical`          | `horizontal`     | Sets the chromosome arrangement of karyotype plots.                                                | Intended values are `horizontal` and `vertical`.                                                       |
+| `--zoom`           | No                                     | `chrom:start-end`                   | —                | Restricts karyotype plotting to a genomic interval.                                                | Example: `Chr1:1000000-2000000`.                                                                       |
+
 
 The authoritative CLI help can always be inspected with:
 
@@ -494,7 +495,7 @@ The exported tables are BED-like TSV files intended primarily for plotting. Expo
 
 ---
 
-## Common use cases & tutorial
+## Common use cases and tutorial
 
 See the [tutorial](analyses/README.md).
 
