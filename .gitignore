@@ -14,6 +14,7 @@ data/examples/edta_GCA_943734735.2.gff
 # data/examples/repeatmasker_GCA_943734735.2.divsum
 # data/examples/repeatmasker_GCA_943734735.2.out
 # data/examples/sequence_report.tsv
+data/examples/trash_summary_GCA_943734735.2.csv
 data/AcolN3
 data/peacock_spiders
 

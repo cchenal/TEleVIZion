@@ -1,35 +1,31 @@
 # TEleVIZion tutorial
 
+The example dataset is based on the [*Anopheles gambiae sensu stricto*](https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_943734735.2/) mosquito, one of the most important vectors of the malaria parasite *Plasmodium falciparum* in sub-Saharan Africa. It has a haploid genome assembly size of approximately **264.5 million base pairs (Mb)** distributed across three main chromosomes (2RL, 3RL and X).
+
 This tutorial demonstrates the main [TEleVIZion](../README.md) workflows using the example data provided in:
 
 ```text
 data/examples/
-```
-
-The example dataset corresponds to the [*Anopheles gambiae sensu stricto*](https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_943734735.2/) mosquito, one of the most potent vectors of the *Plasmodium falciparum* malaria parasite in sub-Saharan Africa. It has a sequenced haploid genome size of approximately 264.5 million base pairs (Mb) distributed across three main chromosomes (2RL, 3RL and X).
-
-The directory contains:
-
-```text
-data/examples/
-├── annotation_GCF_943734735.2.gff
+├── annotation_GCF_943734735.2.gff            # hidden (GitHub repository size limits)
 ├── chroms_metadata_GCA_943734735.2.tsv
-├── edta_GCA_943734735.2.gff
+├── edta_GCA_943734735.2.gff                  # hidden (GitHub repository size limits)
 ├── gc_content_GCA_943734735.2_100000.tsv
 ├── gene_content_GCA_943734735.2_20000.bed
-├── genome_GCA_943734735.2.fasta
+├── genome_GCA_943734735.2.fasta              # hidden (GitHub repository size limits)
 ├── repeatmasker_GCA_943734735.2.divsum
 ├── repeatmasker_GCA_943734735.2.out
 ├── sequence_report.tsv
-└── trash_summary_GCA_943734735.2.csv
+└── trash_summary_GCA_943734735.2.csv         # hidden (GitHub repository size limits)
 ```
 
 All commands below should be run from the **root of the TEleVIZion repository**.
 
-Before starting, activate the TEleVIZion environment:
+Before starting, create the TEleVIZion environment if necessary and activate it:
 
 ```bash
 conda activate televizion
+# or
+# source .venv_televizion/bin/activate
 ```
 
 You can check the available options at any time with:
@@ -43,10 +39,10 @@ python3 scripts/televizion_cli.py --help
 The simplest analysis requires:
 
 1. genome metadata;
-2. repeat annotations;
+2. repeat annotations; and
 3. optionally, a name and window size for the analysis.
 
-Here we will start with the RepeatMasker annotation:
+We will start with the RepeatMasker annotation:
 
 ```bash
 python3 scripts/televizion_cli.py \
@@ -66,13 +62,18 @@ analyses/An_gambiae_RepeatMasker/
 
 Every analysis produces whole-genome summaries of both **insertion count** and **base-pair span**. These measurements are complementary: insertion count measures how frequently repeats occur, whereas base-pair span measures how much genomic sequence they occupy.
 
-The analysis also produces chromosome-scale plots showing how repeat abundance changes along the genome. This spatial view can reveal local repeat enrichment or depletion that is hidden by whole-genome summaries.
+| Insertion count | Base-pair span |
+|:---:|:---:|
+| <img src="../images/An_gambiae_RepeatMasker_whole_genome_stacked_counts_by_class.png" alt="Whole-genome stacked insertion counts by repeat class" width="95%"> | <img src="../images/An_gambiae_RepeatMasker_whole_genome_stacked_lengths_by_class.png" alt="Whole-genome stacked base-pair span by repeat class" width="95%"> |
+| <img src="../images/An_gambiae_RepeatMasker_whole_genome_contiguous_counts_by_class.png" alt="Whole-genome contiguous insertion counts by repeat class" width="95%"> | <img src="../images/An_gambiae_RepeatMasker_whole_genome_contiguous_lengths_by_class.png" alt="Whole-genome contiguous base-pair span by repeat class" width="95%"> |
+
+The analysis also produces chromosome-scale plots (also known as karyoplots) showing how repeat abundance changes along the genome, in terms of insertion counts and base-pair span. This spatial view can reveal local repeat enrichment or depletion that is hidden by whole-genome summaries.
 
 ## 2. Choosing a window size
 
 The `--windowsize` option controls the resolution at which TEleVIZion summarises repeats along the genome.
 
-For example:
+For example, this uses 100-kb windows instead of 500-kb windows:
 
 ```bash
 python3 scripts/televizion_cli.py \
@@ -82,7 +83,9 @@ python3 scripts/televizion_cli.py \
   --windowsize 100000
 ```
 
-This uses 100-kb windows instead of 500-kb windows.
+| 1.5-Mb windows | 500-kb windows | 100-kb windows |
+|:---:|:---:|:---:|
+| <img src="../images/An_gambiae_1.5Mb_1500000_karyoplot_stacked_percentage_by_class.png" alt="Karyoplot using 1.5-Mb windows" width="95%"> | <img src="../images/An_gambiae_RepeatMasker_500000_karyoplot_stacked_percentage_by_class.png" alt="Karyoplot using 500-kb windows" width="95%"> | <img src="../images/An_gambiae_100kb_100000_karyoplot_stacked_percentage_by_class.png" alt="Karyoplot using 100-kb windows" width="95%"> |
 
 Smaller windows provide finer spatial resolution but generate larger intermediate tables and can make plotting slower. Larger windows provide a broader overview of repeat distribution.
 
@@ -114,7 +117,7 @@ The resulting plots have the same general structure as the RepeatMasker analysis
 
 ## 4. Analysing TRASH annotations
 
-TEleVIZion also supports TRASH repeat summaries.
+TEleVIZion also supports TRASH repeat summaries. TRASH support is currently considered **beta**.
 
 The example file is:
 
@@ -133,8 +136,6 @@ python3 scripts/televizion_cli.py \
 ```
 
 For TRASH annotations, TEleVIZion uses the genomic region reported by TRASH together with its repeat classification and average score. The average score is used as the identity measure for the corresponding repeated region and consensus sequence.
-
-TRASH support is currently considered **beta**.
 
 ## 5. Adding RepeatMasker Kimura divergence
 
@@ -171,6 +172,10 @@ analyses/An_gambiae_RepeatMasker_Kimura/karyoplot_tables/
 
 If `--kimura` is omitted, RepeatMasker analyses still work. In that case TEleVIZion derives an identity-like measure from the per-insertion percentage divergence reported in the RepeatMasker `.out` file.
 
+| Default | Kimura divergence |
+|:---:|:---:|
+| <img src="../images/An_gambiae_RepeatMasker_500000_karyoplot_stacked_percentage_by_class.png" alt="Default RepeatMasker karyoplot" width="95%"> | <img src="../images/An_gambiae_RepeatMasker_Kimura_500000_karyoplot_stacked_percentage_by_class.png" alt="RepeatMasker karyoplot using Kimura divergence" width="95%"> |
+
 ## 6. Plotting selected and ordered chromosomes
 
 By default:
@@ -202,9 +207,7 @@ Multiple sequence IDs can be supplied as a comma-separated list:
 
 ## 7. Generating per-chromosome summaries
 
-Whole-genome summary plots combine information across chromosomes.
-
-To additionally generate equivalent summary plots independently for each chromosome, use:
+Whole-genome summary plots combine information across chromosomes. To generate equivalent summary plots independently for each chromosome as well, use:
 
 ```text
 --perchromosome
@@ -227,13 +230,15 @@ These figures are written under:
 analyses/An_gambiae_per_chromosome/per_chromosome/
 ```
 
-This can be useful when a repeat family is abundant on one chromosome but relatively uncommon across the genome as a whole.
+| Whole genome | 2RL | 3RL | X |
+|:---:|:---:|:---:|:---:|
+| <img src="../images/An_gambiae_per_chromosome_whole_genome_contiguous_lengths_by_class.png" alt="Whole-genome repeat summary" width="95%"> | <img src="../images/An_gambiae_per_chromosome_2RL_contiguous_lengths_by_class.png" alt="Chromosome 2RL repeat summary" width="95%"> | <img src="../images/An_gambiae_per_chromosome_3RL_contiguous_lengths_by_class.png" alt="Chromosome 3RL repeat summary" width="95%"> | <img src="../images/An_gambiae_per_chromosome_X_contiguous_lengths_by_class.png" alt="Chromosome X repeat summary" width="95%"> |
 
 ## 8. Generating plots for individual repeat classes
 
 The standard karyotype combines repeat classes into the same figure.
 
-Use `--perclass` to additionally generate a separate karyotype for each repeat class:
+Use `--perclass` to generate a separate karyotype for each repeat class as well:
 
 ```bash
 python3 scripts/televizion_cli.py \
@@ -249,6 +254,10 @@ The additional figures are written to:
 ```text
 analyses/An_gambiae_per_class/per_class/
 ```
+
+| All classes | Individual class |
+|:---:|:---:|
+| <img src="../images/An_gambiae_per_class_500000_karyoplot_stacked_percentage_by_class.png" alt="Karyoplot showing all repeat classes" width="95%"> | <img src="../images/An_gambiae_per_class_500000_karyoplot_percentage_LINE.png" alt="Karyoplot showing the LINE repeat class" width="95%"> |
 
 These plots make it easier to inspect the genomic distribution of a particular TE class without signals from other repeat classes obscuring the pattern.
 
@@ -300,7 +309,7 @@ python3 scripts/televizion_cli.py \
   --palette data/palettes/personalised_palette_example.tsv
 ```
 
-A palette contains six columns:
+A palette file contains six columns:
 
 1. colour name;
 2. red value;
@@ -317,7 +326,7 @@ When combining `--palette` with `--classesorder`, make sure every selected class
 
 Repeat distribution can be interpreted alongside genomic context.
 
-The example dataset includes precomputed GC content:
+The example dataset includes pre-computed GC content:
 
 ```bash
 python3 scripts/utils/create_gc_content.py \
@@ -337,7 +346,9 @@ python3 scripts/televizion_cli.py \
   --gc data/examples/gc_content_GCA_943734735.2_100000.tsv
 ```
 
-The GC-content track is displayed alongside the repeat landscape, allowing repeat-rich and repeat-poor regions to be compared with local GC composition.
+<p align="center">
+  <img src="../images/An_gambiae_GC_500000_karyoplot_stacked_percentage_by_class.png" width="80%">
+</p>
 
 The window size of the contextual track does not have to be the same as the TEleVIZion `--windowsize`; the supplied file already contains its genomic intervals.
 
@@ -345,18 +356,18 @@ The window size of the contextual track does not have to be the same as the TEle
 
 Gene density can alternatively be shown alongside the repeat landscape.
 
-The example gene-content track is:
+The example gene-content track can be generated with:
 
 ```bash
 python3 scripts/utils/create_gene_content.py \
   data/examples/chroms_metadata_GCA_943734735.2.tsv \
   data/examples/annotation_GCF_943734735.2.gff \
   --window 20000 \
-  --sequence-report data/example/sequence_report.tsv \
+  --sequence-report data/examples/sequence_report.tsv \
   --out data/examples/gene_content_GCA_943734735.2_20000.bed
 ```
 
-Use the [output](data/examples/gene_content_GCA_943734735.2_20000.bed) to run:
+Use the resulting [output](data/examples/gene_content_GCA_943734735.2_20000.bed) to run:
 
 ```bash
 python3 scripts/televizion_cli.py \
@@ -392,6 +403,10 @@ python3 scripts/televizion_cli.py \
   --zoom OX030907.1:60000000-80000000
 ```
 
+<p align="center">
+  <img src="../images/An_gambiae_zoom_50000_zoom_OX030907.1_60000000_80000000_karyoplot_stacked_percentage_by_class.png" width="80%">
+</p>
+
 Here a smaller 50-kb window is used to provide greater resolution within the selected interval.
 
 When using `--zoom`, choose a window size that produces several windows within the region. A 20-Mb interval plotted with 10-Mb windows, for example, would provide very little spatial detail.
@@ -404,7 +419,7 @@ Karyotype plots use a horizontal chromosome arrangement by default:
 --layout horizontal
 ```
 
-A vertical arrangement can instead be requested:
+Vertical layouts can be useful when plotting many chromosomes or when preparing figures for page layouts with limited horizontal space. You can request a vertical arrangement with:
 
 ```bash
 python3 scripts/televizion_cli.py \
@@ -415,7 +430,9 @@ python3 scripts/televizion_cli.py \
   --layout vertical
 ```
 
-Vertical layouts can be useful when plotting many chromosomes or when preparing figures for page layouts with limited horizontal space.
+<p align="center">
+  <img src="../images/An_gambiae_vertical_500000_karyoplot_stacked_percentage_by_class.png" width="80%">
+</p>
 
 ## 15. Changing the size of summary figures
 
@@ -436,7 +453,7 @@ python3 scripts/televizion_cli.py \
   --figsize 14,10
 ```
 
-The dimensions are in inches.
+Dimensions are specified in inches.
 
 `--figsize` affects the Python summary plots and does not control the dimensions of the karyoploteR figures.
 
@@ -473,14 +490,12 @@ python3 scripts/televizion_cli.py \
 Supported formats are:
 
 ```text
-pdf
-png
-jpg
+pdf, png, jpg
 ```
 
 ## 17. Controlling raster resolution
 
-For PNG and JPG output, resolution is controlled with `--dpi`.
+For PNG and JPG output, the resolution is controlled with `--dpi`.
 
 For example:
 
@@ -511,6 +526,7 @@ python3 scripts/televizion_cli.py \
   --edta data/examples/edta_GCA_943734735.2.gff \
   --windowsize 100000 \
   --gc data/examples/gc_content_GCA_943734735.2_100000.tsv \
+  --chromtoplot OX030907.1,OX030908.1,OX030909.1 \
   --perchromosome \
   --perclass \
   --layout vertical \
@@ -519,25 +535,28 @@ python3 scripts/televizion_cli.py \
   --dpi 600
 ```
 
+<p align="center">
+  <img src="../images/An_gambiae_EDTA_detailed_100000_karyoplot_stacked_percentage_by_class.png" width="80%">
+</p>
+
 This run:
 
-* uses EDTA annotations;
-* aggregates repeats into 100-kb windows;
-* adds GC content as genomic context;
-* generates per-chromosome summary plots;
-* generates individual repeat-class karyotypes;
-* uses a vertical karyotype layout;
-* enlarges the Python summary figures;
-* generates both PDF and PNG figures;
-* renders raster output at 600 DPI.
+- uses EDTA annotations;
+- reorders the chromosomes;
+- aggregates repeats into 100-kb windows;
+- adds GC content as genomic context;
+- generates per-chromosome summary plots;
+- generates individual repeat-class karyotypes;
+- uses a vertical karyotype layout;
+- enlarges the Python summary figures;
+- generates both PDF and PNG figures;
+- renders raster output at 600 DPI.
 
 Combining options in this way makes it possible to move from a quick exploratory analysis to figures tailored for a particular biological question.
 
 ## 19. Creating the input tracks yourself
 
-The files under `data/examples/` are already prepared, so you do not need to generate them to complete this tutorial.
-
-For a new genome, however, TEleVIZion provides helper scripts for constructing the required metadata and contextual tracks.
+The files under `data/examples/` are already prepared, so you do not need to generate them to complete this tutorial. For a new genome, however, TEleVIZion provides helper scripts for constructing the required metadata and contextual tracks.
 
 ### Genome metadata
 
@@ -547,13 +566,11 @@ A starter chromosome metadata table can be generated from the FASTA used for rep
 python3 scripts/utils/create_chroms.py --help
 ```
 
-The included:
-
 ```text
 data/examples/sequence_report.tsv
 ```
 
-provides an example of an NCBI sequence report that can be used when preparing chromosome metadata where appropriate.
+This file provides an example of an [NCBI sequence report](../images/ncbi_sequence_report.png) that can be used when preparing chromosome metadata where appropriate (i.e. `chr` → `name`).
 
 ### GC content
 
@@ -563,12 +580,6 @@ Generate a GC-content track with:
 python3 scripts/utils/create_gc_content.py --help
 ```
 
-The resulting file has the same role as:
-
-```text
-data/examples/gc_content_GCA_943734735.2_100000.tsv
-```
-
 ### Gene content
 
 Gene content can be calculated from a genome annotation GFF using:
@@ -576,20 +587,6 @@ Gene content can be calculated from a genome annotation GFF using:
 ```bash
 python3 scripts/utils/create_gene_content.py --help
 ```
-
-For the example assembly, the source annotation provided is:
-
-```text
-data/examples/annotation_GCF_943734735.2.gff
-```
-
-and the prepared track is:
-
-```text
-data/examples/gene_content_GCA_943734735.2_20000.bed
-```
-
-These helper scripts make it possible to reproduce the same input structure for other genome assemblies.
 
 ## 20. Where to go next
 
@@ -603,4 +600,3 @@ A useful progression when exploring a new genome is:
 6. **Zoom in.** Once an interesting region is identified, rerun TEleVIZion with a smaller window size and `--zoom`.
 7. **Standardise comparative figures.** When comparing genomes or annotation methods, use `--chromtoplot`, `--classesorder`, `--palette`, `--figsize`, `--layout`, `--output-formats`, and `--dpi` to keep visualisation choices consistent.
 
-The intermediate BED-like tables retained in each analysis directory can also be used for downstream analyses beyond the figures generated by TEleVIZion.
