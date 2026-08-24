@@ -2,10 +2,12 @@
 
 TEleVIZion is a research workflow for visualising transposable element (TE) and repeat annotations across genomes. This version converts **RepeatMasker**, **EDTA** or **TRASH** output into windowed genome summaries, whole-genome bar plots, and chromosome-scale karyotype plots **in a single command-line**.
 
-TEleVIZion is designed for exploratory and comparative genomics: choose the chromosomes or scaffolds you want to inspect, select an appropriate window size, and generate a consistent set of figures and reusable intermediate tables. TEleVIZion can help answer questions such as:
+TEleVIZion is designed for exploratory and comparative genomics: choose the chromosomes or scaffolds you want to inspect, select an appropriate window size, and generate a consistent set of figures and reusable intermediate tables. Already hyped? Go directly to the [tutorial](analyses/README.md)!
+
+If not, TEleVIZion can help answer questions such as:
 
 - Which repeat types dominate a genome by insertion count or base-pair span?
-- Are repeats concentrated on particular chromosomes, chromosome arms, or genomic regions?
+- Are repeats concentrated on particular chromosomes or genomic regions?
 - Are some regions enriched for relatively young or old repeats?
 
 > **In short:** TEleVIZion helps you move from TE and repeat annotations to interpretable genome-wide and chromosome-scale visualisations.
@@ -22,7 +24,7 @@ The workflow supports:
 - Regional zooming.
 - PDF, PNG, and JPG output.
 
-TEleVIZion does **not** run annotation tools; it consumes their output.
+**NB**: TEleVIZion does **not** run annotation tools; it consumes their output.
 
 ---
 
