@@ -1,0 +1,192 @@
+Assembly Accession	Assembly-unit name	Chromosome name	GC Count	GC Percent	GenBank seq accession	Molecule type	RefSeq seq accession	Role	Seq length	UCSC style name	Unlocalized Count	Sequence name
+GCF_943734735.2	Primary Assembly	X	12732661	45.5	OX030909.1	Chromosome	NC_064600.1	assembled-molecule	28097889		161	X
+GCF_943734735.2	Primary Assembly	2	52891247	44.5	OX030907.1	Chromosome	NC_064601.1	assembled-molecule	118196952			2RL
+GCF_943734735.2	Primary Assembly	3	43416187	44	OX030908.1	Chromosome	NC_064602.1	assembled-molecule	99149756			3RL
+GCF_943734735.2	Primary Assembly	X			CALSDY020000001.1	Chromosome	NW_026902553.1	unlocalized-scaffold	2164118		161	X_unloc_1
+GCF_943734735.2	Primary Assembly	X			CALSDY020000002.1	Chromosome	NW_026902626.1	unlocalized-scaffold	657391		161	X_unloc_2
+GCF_943734735.2	Primary Assembly	X			CALSDY020000003.1	Chromosome	NW_026902637.1	unlocalized-scaffold	569462		161	X_unloc_3
+GCF_943734735.2	Primary Assembly	X			CALSDY020000004.1	Chromosome	NW_026902648.1	unlocalized-scaffold	387890		161	X_unloc_4
+GCF_943734735.2	Primary Assembly	X			CALSDY020000005.1	Chromosome	NW_026902659.1	unlocalized-scaffold	276960		161	X_unloc_5
+GCF_943734735.2	Primary Assembly	X			CALSDY020000006.1	Chromosome	NW_026902670.1	unlocalized-scaffold	219387		161	X_unloc_6
+GCF_943734735.2	Primary Assembly	X			CALSDY020000007.1	Chromosome	NW_026902681.1	unlocalized-scaffold	187995		161	X_unloc_7
+GCF_943734735.2	Primary Assembly	X			CALSDY020000008.1	Chromosome	NW_026902692.1	unlocalized-scaffold	187637		161	X_unloc_8
+GCF_943734735.2	Primary Assembly	X			CALSDY020000009.1	Chromosome	NW_026902703.1	unlocalized-scaffold	168435		161	X_unloc_9
+GCF_943734735.2	Primary Assembly	X			CALSDY020000010.1	Chromosome	NW_026902554.1	unlocalized-scaffold	164687		161	X_unloc_10
+GCF_943734735.2	Primary Assembly	X			CALSDY020000011.1	Chromosome	NW_026902565.1	unlocalized-scaffold	154153		161	X_unloc_11
+GCF_943734735.2	Primary Assembly	X			CALSDY020000012.1	Chromosome	NW_026902576.1	unlocalized-scaffold	123972		161	X_unloc_12
+GCF_943734735.2	Primary Assembly	X			CALSDY020000013.1	Chromosome	NW_026902587.1	unlocalized-scaffold	121854		161	X_unloc_13
+GCF_943734735.2	Primary Assembly	X			CALSDY020000014.1	Chromosome	NW_026902598.1	unlocalized-scaffold	111972		161	X_unloc_14
+GCF_943734735.2	Primary Assembly	X			CALSDY020000015.1	Chromosome	NW_026902609.1	unlocalized-scaffold	101726		161	X_unloc_15
+GCF_943734735.2	Primary Assembly	X			CALSDY020000016.1	Chromosome	NW_026902620.1	unlocalized-scaffold	101719		161	X_unloc_16
+GCF_943734735.2	Primary Assembly	X			CALSDY020000017.1	Chromosome	NW_026902623.1	unlocalized-scaffold	100994		161	X_unloc_17
+GCF_943734735.2	Primary Assembly	X			CALSDY020000018.1	Chromosome	NW_026902624.1	unlocalized-scaffold	99177		161	X_unloc_18
+GCF_943734735.2	Primary Assembly	X			CALSDY020000019.1	Chromosome	NW_026902625.1	unlocalized-scaffold	96204		161	X_unloc_19
+GCF_943734735.2	Primary Assembly	X			CALSDY020000020.1	Chromosome	NW_026902627.1	unlocalized-scaffold	95944		161	X_unloc_20
+GCF_943734735.2	Primary Assembly	X			CALSDY020000021.1	Chromosome	NW_026902628.1	unlocalized-scaffold	87820		161	X_unloc_21
+GCF_943734735.2	Primary Assembly	X			CALSDY020000022.1	Chromosome	NW_026902629.1	unlocalized-scaffold	87085		161	X_unloc_22
+GCF_943734735.2	Primary Assembly	X			CALSDY020000023.1	Chromosome	NW_026902630.1	unlocalized-scaffold	81098		161	X_unloc_23
+GCF_943734735.2	Primary Assembly	X			CALSDY020000024.1	Chromosome	NW_026902631.1	unlocalized-scaffold	80938		161	X_unloc_24
+GCF_943734735.2	Primary Assembly	X			CALSDY020000025.1	Chromosome	NW_026902632.1	unlocalized-scaffold	79180		161	X_unloc_25
+GCF_943734735.2	Primary Assembly	X			CALSDY020000026.1	Chromosome	NW_026902633.1	unlocalized-scaffold	77200		161	X_unloc_26
+GCF_943734735.2	Primary Assembly	X			CALSDY020000027.1	Chromosome	NW_026902634.1	unlocalized-scaffold	76972		161	X_unloc_27
+GCF_943734735.2	Primary Assembly	X			CALSDY020000028.1	Chromosome	NW_026902635.1	unlocalized-scaffold	75007		161	X_unloc_28
+GCF_943734735.2	Primary Assembly	X			CALSDY020000029.1	Chromosome	NW_026902636.1	unlocalized-scaffold	74530		161	X_unloc_29
+GCF_943734735.2	Primary Assembly	X			CALSDY020000030.1	Chromosome	NW_026902638.1	unlocalized-scaffold	73837		161	X_unloc_30
+GCF_943734735.2	Primary Assembly	X			CALSDY020000031.1	Chromosome	NW_026902639.1	unlocalized-scaffold	71468		161	X_unloc_31
+GCF_943734735.2	Primary Assembly	X			CALSDY020000032.1	Chromosome	NW_026902640.1	unlocalized-scaffold	70457		161	X_unloc_32
+GCF_943734735.2	Primary Assembly	X			CALSDY020000033.1	Chromosome	NW_026902641.1	unlocalized-scaffold	69987		161	X_unloc_33
+GCF_943734735.2	Primary Assembly	X			CALSDY020000034.1	Chromosome	NW_026902642.1	unlocalized-scaffold	69926		161	X_unloc_34
+GCF_943734735.2	Primary Assembly	X			CALSDY020000035.1	Chromosome	NW_026902643.1	unlocalized-scaffold	69696		161	X_unloc_35
+GCF_943734735.2	Primary Assembly	X			CALSDY020000036.1	Chromosome	NW_026902644.1	unlocalized-scaffold	62937		161	X_unloc_36
+GCF_943734735.2	Primary Assembly	X			CALSDY020000037.1	Chromosome	NW_026902645.1	unlocalized-scaffold	61640		161	X_unloc_37
+GCF_943734735.2	Primary Assembly	X			CALSDY020000038.1	Chromosome	NW_026902646.1	unlocalized-scaffold	60906		161	X_unloc_38
+GCF_943734735.2	Primary Assembly	X			CALSDY020000039.1	Chromosome	NW_026902647.1	unlocalized-scaffold	58984		161	X_unloc_39
+GCF_943734735.2	Primary Assembly	X			CALSDY020000040.1	Chromosome	NW_026902649.1	unlocalized-scaffold	57885		161	X_unloc_40
+GCF_943734735.2	Primary Assembly	X			CALSDY020000041.1	Chromosome	NW_026902650.1	unlocalized-scaffold	55467		161	X_unloc_41
+GCF_943734735.2	Primary Assembly	X			CALSDY020000042.1	Chromosome	NW_026902651.1	unlocalized-scaffold	54849		161	X_unloc_42
+GCF_943734735.2	Primary Assembly	X			CALSDY020000043.1	Chromosome	NW_026902652.1	unlocalized-scaffold	53878		161	X_unloc_43
+GCF_943734735.2	Primary Assembly	X			CALSDY020000044.1	Chromosome	NW_026902653.1	unlocalized-scaffold	53521		161	X_unloc_44
+GCF_943734735.2	Primary Assembly	X			CALSDY020000045.1	Chromosome	NW_026902654.1	unlocalized-scaffold	52870		161	X_unloc_45
+GCF_943734735.2	Primary Assembly	X			CALSDY020000046.1	Chromosome	NW_026902655.1	unlocalized-scaffold	52099		161	X_unloc_46
+GCF_943734735.2	Primary Assembly	X			CALSDY020000047.1	Chromosome	NW_026902656.1	unlocalized-scaffold	50272		161	X_unloc_47
+GCF_943734735.2	Primary Assembly	X			CALSDY020000048.1	Chromosome	NW_026902657.1	unlocalized-scaffold	50102		161	X_unloc_48
+GCF_943734735.2	Primary Assembly	X			CALSDY020000049.1	Chromosome	NW_026902658.1	unlocalized-scaffold	50012		161	X_unloc_49
+GCF_943734735.2	Primary Assembly	X			CALSDY020000050.1	Chromosome	NW_026902660.1	unlocalized-scaffold	49911		161	X_unloc_50
+GCF_943734735.2	Primary Assembly	X			CALSDY020000051.1	Chromosome	NW_026902661.1	unlocalized-scaffold	49882		161	X_unloc_51
+GCF_943734735.2	Primary Assembly	X			CALSDY020000052.1	Chromosome	NW_026902662.1	unlocalized-scaffold	49160		161	X_unloc_52
+GCF_943734735.2	Primary Assembly	X			CALSDY020000053.1	Chromosome	NW_026902663.1	unlocalized-scaffold	46771		161	X_unloc_53
+GCF_943734735.2	Primary Assembly	X			CALSDY020000054.1	Chromosome	NW_026902664.1	unlocalized-scaffold	45757		161	X_unloc_54
+GCF_943734735.2	Primary Assembly	X			CALSDY020000055.1	Chromosome	NW_026902665.1	unlocalized-scaffold	45752		161	X_unloc_55
+GCF_943734735.2	Primary Assembly	X			CALSDY020000056.1	Chromosome	NW_026902666.1	unlocalized-scaffold	45410		161	X_unloc_56
+GCF_943734735.2	Primary Assembly	X			CALSDY020000057.1	Chromosome	NW_026902667.1	unlocalized-scaffold	45205		161	X_unloc_57
+GCF_943734735.2	Primary Assembly	X			CALSDY020000058.1	Chromosome	NW_026902668.1	unlocalized-scaffold	44228		161	X_unloc_58
+GCF_943734735.2	Primary Assembly	X			CALSDY020000059.1	Chromosome	NW_026902669.1	unlocalized-scaffold	44114		161	X_unloc_59
+GCF_943734735.2	Primary Assembly	X			CALSDY020000060.1	Chromosome	NW_026902671.1	unlocalized-scaffold	43373		161	X_unloc_60
+GCF_943734735.2	Primary Assembly	X			CALSDY020000061.1	Chromosome	NW_026902672.1	unlocalized-scaffold	43327		161	X_unloc_61
+GCF_943734735.2	Primary Assembly	X			CALSDY020000062.1	Chromosome	NW_026902673.1	unlocalized-scaffold	43323		161	X_unloc_62
+GCF_943734735.2	Primary Assembly	X			CALSDY020000063.1	Chromosome	NW_026902674.1	unlocalized-scaffold	42831		161	X_unloc_63
+GCF_943734735.2	Primary Assembly	X			CALSDY020000064.1	Chromosome	NW_026902675.1	unlocalized-scaffold	42780		161	X_unloc_64
+GCF_943734735.2	Primary Assembly	X			CALSDY020000065.1	Chromosome	NW_026902676.1	unlocalized-scaffold	42078		161	X_unloc_65
+GCF_943734735.2	Primary Assembly	X			CALSDY020000066.1	Chromosome	NW_026902677.1	unlocalized-scaffold	42072		161	X_unloc_66
+GCF_943734735.2	Primary Assembly	X			CALSDY020000067.1	Chromosome	NW_026902678.1	unlocalized-scaffold	41066		161	X_unloc_67
+GCF_943734735.2	Primary Assembly	X			CALSDY020000068.1	Chromosome	NW_026902679.1	unlocalized-scaffold	40962		161	X_unloc_68
+GCF_943734735.2	Primary Assembly	X			CALSDY020000069.1	Chromosome	NW_026902680.1	unlocalized-scaffold	40649		161	X_unloc_69
+GCF_943734735.2	Primary Assembly	X			CALSDY020000070.1	Chromosome	NW_026902682.1	unlocalized-scaffold	40079		161	X_unloc_70
+GCF_943734735.2	Primary Assembly	X			CALSDY020000071.1	Chromosome	NW_026902683.1	unlocalized-scaffold	40036		161	X_unloc_71
+GCF_943734735.2	Primary Assembly	X			CALSDY020000072.1	Chromosome	NW_026902684.1	unlocalized-scaffold	39518		161	X_unloc_72
+GCF_943734735.2	Primary Assembly	X			CALSDY020000073.1	Chromosome	NW_026902685.1	unlocalized-scaffold	39380		161	X_unloc_73
+GCF_943734735.2	Primary Assembly	X			CALSDY020000074.1	Chromosome	NW_026902686.1	unlocalized-scaffold	39154		161	X_unloc_74
+GCF_943734735.2	Primary Assembly	X			CALSDY020000075.1	Chromosome	NW_026902687.1	unlocalized-scaffold	38179		161	X_unloc_75
+GCF_943734735.2	Primary Assembly	X			CALSDY020000076.1	Chromosome	NW_026902688.1	unlocalized-scaffold	37523		161	X_unloc_76
+GCF_943734735.2	Primary Assembly	X			CALSDY020000077.1	Chromosome	NW_026902689.1	unlocalized-scaffold	37244		161	X_unloc_77
+GCF_943734735.2	Primary Assembly	X			CALSDY020000078.1	Chromosome	NW_026902690.1	unlocalized-scaffold	37123		161	X_unloc_78
+GCF_943734735.2	Primary Assembly	X			CALSDY020000079.1	Chromosome	NW_026902691.1	unlocalized-scaffold	36964		161	X_unloc_79
+GCF_943734735.2	Primary Assembly	X			CALSDY020000080.1	Chromosome	NW_026902693.1	unlocalized-scaffold	36801		161	X_unloc_80
+GCF_943734735.2	Primary Assembly	X			CALSDY020000081.1	Chromosome	NW_026902694.1	unlocalized-scaffold	35835		161	X_unloc_81
+GCF_943734735.2	Primary Assembly	X			CALSDY020000082.1	Chromosome	NW_026902695.1	unlocalized-scaffold	35472		161	X_unloc_82
+GCF_943734735.2	Primary Assembly	X			CALSDY020000083.1	Chromosome	NW_026902696.1	unlocalized-scaffold	35308		161	X_unloc_83
+GCF_943734735.2	Primary Assembly	X			CALSDY020000084.1	Chromosome	NW_026902697.1	unlocalized-scaffold	35024		161	X_unloc_84
+GCF_943734735.2	Primary Assembly	X			CALSDY020000085.1	Chromosome	NW_026902698.1	unlocalized-scaffold	34961		161	X_unloc_85
+GCF_943734735.2	Primary Assembly	X			CALSDY020000086.1	Chromosome	NW_026902699.1	unlocalized-scaffold	34312		161	X_unloc_86
+GCF_943734735.2	Primary Assembly	X			CALSDY020000087.1	Chromosome	NW_026902700.1	unlocalized-scaffold	34053		161	X_unloc_87
+GCF_943734735.2	Primary Assembly	X			CALSDY020000088.1	Chromosome	NW_026902701.1	unlocalized-scaffold	33545		161	X_unloc_88
+GCF_943734735.2	Primary Assembly	X			CALSDY020000089.1	Chromosome	NW_026902702.1	unlocalized-scaffold	33231		161	X_unloc_89
+GCF_943734735.2	Primary Assembly	X			CALSDY020000090.1	Chromosome	NW_026902704.1	unlocalized-scaffold	32981		161	X_unloc_90
+GCF_943734735.2	Primary Assembly	X			CALSDY020000091.1	Chromosome	NW_026902705.1	unlocalized-scaffold	32625		161	X_unloc_91
+GCF_943734735.2	Primary Assembly	X			CALSDY020000092.1	Chromosome	NW_026902706.1	unlocalized-scaffold	32597		161	X_unloc_92
+GCF_943734735.2	Primary Assembly	X			CALSDY020000093.1	Chromosome	NW_026902707.1	unlocalized-scaffold	32351		161	X_unloc_93
+GCF_943734735.2	Primary Assembly	X			CALSDY020000094.1	Chromosome	NW_026902708.1	unlocalized-scaffold	31859		161	X_unloc_94
+GCF_943734735.2	Primary Assembly	X			CALSDY020000095.1	Chromosome	NW_026902709.1	unlocalized-scaffold	31795		161	X_unloc_95
+GCF_943734735.2	Primary Assembly	X			CALSDY020000096.1	Chromosome	NW_026902710.1	unlocalized-scaffold	31673		161	X_unloc_96
+GCF_943734735.2	Primary Assembly	X			CALSDY020000097.1	Chromosome	NW_026902711.1	unlocalized-scaffold	31608		161	X_unloc_97
+GCF_943734735.2	Primary Assembly	X			CALSDY020000098.1	Chromosome	NW_026902712.1	unlocalized-scaffold	31584		161	X_unloc_98
+GCF_943734735.2	Primary Assembly	X			CALSDY020000099.1	Chromosome	NW_026902713.1	unlocalized-scaffold	31438		161	X_unloc_99
+GCF_943734735.2	Primary Assembly	X			CALSDY020000100.1	Chromosome	NW_026902555.1	unlocalized-scaffold	31174		161	X_unloc_100
+GCF_943734735.2	Primary Assembly	X			CALSDY020000101.1	Chromosome	NW_026902556.1	unlocalized-scaffold	31013		161	X_unloc_101
+GCF_943734735.2	Primary Assembly	X			CALSDY020000102.1	Chromosome	NW_026902557.1	unlocalized-scaffold	30759		161	X_unloc_102
+GCF_943734735.2	Primary Assembly	X			CALSDY020000103.1	Chromosome	NW_026902558.1	unlocalized-scaffold	30683		161	X_unloc_103
+GCF_943734735.2	Primary Assembly	X			CALSDY020000104.1	Chromosome	NW_026902559.1	unlocalized-scaffold	30218		161	X_unloc_104
+GCF_943734735.2	Primary Assembly	X			CALSDY020000105.1	Chromosome	NW_026902560.1	unlocalized-scaffold	30108		161	X_unloc_105
+GCF_943734735.2	Primary Assembly	X			CALSDY020000106.1	Chromosome	NW_026902561.1	unlocalized-scaffold	30010		161	X_unloc_106
+GCF_943734735.2	Primary Assembly	X			CALSDY020000107.1	Chromosome	NW_026902562.1	unlocalized-scaffold	29908		161	X_unloc_107
+GCF_943734735.2	Primary Assembly	X			CALSDY020000108.1	Chromosome	NW_026902563.1	unlocalized-scaffold	29727		161	X_unloc_108
+GCF_943734735.2	Primary Assembly	X			CALSDY020000109.1	Chromosome	NW_026902564.1	unlocalized-scaffold	29131		161	X_unloc_109
+GCF_943734735.2	Primary Assembly	X			CALSDY020000110.1	Chromosome	NW_026902566.1	unlocalized-scaffold	28987		161	X_unloc_110
+GCF_943734735.2	Primary Assembly	X			CALSDY020000111.1	Chromosome	NW_026902567.1	unlocalized-scaffold	28919		161	X_unloc_111
+GCF_943734735.2	Primary Assembly	X			CALSDY020000112.1	Chromosome	NW_026902568.1	unlocalized-scaffold	28851		161	X_unloc_112
+GCF_943734735.2	Primary Assembly	X			CALSDY020000113.1	Chromosome	NW_026902569.1	unlocalized-scaffold	28692		161	X_unloc_113
+GCF_943734735.2	Primary Assembly	X			CALSDY020000114.1	Chromosome	NW_026902570.1	unlocalized-scaffold	28627		161	X_unloc_114
+GCF_943734735.2	Primary Assembly	X			CALSDY020000115.1	Chromosome	NW_026902571.1	unlocalized-scaffold	28329		161	X_unloc_115
+GCF_943734735.2	Primary Assembly	X			CALSDY020000116.1	Chromosome	NW_026902572.1	unlocalized-scaffold	27695		161	X_unloc_116
+GCF_943734735.2	Primary Assembly	X			CALSDY020000117.1	Chromosome	NW_026902573.1	unlocalized-scaffold	27644		161	X_unloc_117
+GCF_943734735.2	Primary Assembly	X			CALSDY020000118.1	Chromosome	NW_026902574.1	unlocalized-scaffold	27310		161	X_unloc_118
+GCF_943734735.2	Primary Assembly	X			CALSDY020000119.1	Chromosome	NW_026902575.1	unlocalized-scaffold	27237		161	X_unloc_119
+GCF_943734735.2	Primary Assembly	X			CALSDY020000120.1	Chromosome	NW_026902577.1	unlocalized-scaffold	27092		161	X_unloc_120
+GCF_943734735.2	Primary Assembly	X			CALSDY020000121.1	Chromosome	NW_026902578.1	unlocalized-scaffold	27045		161	X_unloc_121
+GCF_943734735.2	Primary Assembly	X			CALSDY020000122.1	Chromosome	NW_026902579.1	unlocalized-scaffold	26917		161	X_unloc_122
+GCF_943734735.2	Primary Assembly	X			CALSDY020000123.1	Chromosome	NW_026902580.1	unlocalized-scaffold	26882		161	X_unloc_123
+GCF_943734735.2	Primary Assembly	X			CALSDY020000124.1	Chromosome	NW_026902581.1	unlocalized-scaffold	26860		161	X_unloc_124
+GCF_943734735.2	Primary Assembly	X			CALSDY020000125.1	Chromosome	NW_026902582.1	unlocalized-scaffold	26823		161	X_unloc_125
+GCF_943734735.2	Primary Assembly	X			CALSDY020000126.1	Chromosome	NW_026902583.1	unlocalized-scaffold	26406		161	X_unloc_126
+GCF_943734735.2	Primary Assembly	X			CALSDY020000127.1	Chromosome	NW_026902584.1	unlocalized-scaffold	26357		161	X_unloc_127
+GCF_943734735.2	Primary Assembly	X			CALSDY020000128.1	Chromosome	NW_026902585.1	unlocalized-scaffold	25615		161	X_unloc_128
+GCF_943734735.2	Primary Assembly	X			CALSDY020000129.1	Chromosome	NW_026902586.1	unlocalized-scaffold	25535		161	X_unloc_129
+GCF_943734735.2	Primary Assembly	X			CALSDY020000130.1	Chromosome	NW_026902588.1	unlocalized-scaffold	25490		161	X_unloc_130
+GCF_943734735.2	Primary Assembly	X			CALSDY020000131.1	Chromosome	NW_026902589.1	unlocalized-scaffold	25341		161	X_unloc_131
+GCF_943734735.2	Primary Assembly	X			CALSDY020000132.1	Chromosome	NW_026902590.1	unlocalized-scaffold	25250		161	X_unloc_132
+GCF_943734735.2	Primary Assembly	X			CALSDY020000133.1	Chromosome	NW_026902591.1	unlocalized-scaffold	25080		161	X_unloc_133
+GCF_943734735.2	Primary Assembly	X			CALSDY020000134.1	Chromosome	NW_026902592.1	unlocalized-scaffold	24884		161	X_unloc_134
+GCF_943734735.2	Primary Assembly	X			CALSDY020000135.1	Chromosome	NW_026902593.1	unlocalized-scaffold	24851		161	X_unloc_135
+GCF_943734735.2	Primary Assembly	X			CALSDY020000136.1	Chromosome	NW_026902594.1	unlocalized-scaffold	24833		161	X_unloc_136
+GCF_943734735.2	Primary Assembly	X			CALSDY020000137.1	Chromosome	NW_026902595.1	unlocalized-scaffold	24830		161	X_unloc_137
+GCF_943734735.2	Primary Assembly	X			CALSDY020000138.1	Chromosome	NW_026902596.1	unlocalized-scaffold	24569		161	X_unloc_138
+GCF_943734735.2	Primary Assembly	X			CALSDY020000139.1	Chromosome	NW_026902597.1	unlocalized-scaffold	24488		161	X_unloc_139
+GCF_943734735.2	Primary Assembly	X			CALSDY020000140.1	Chromosome	NW_026902599.1	unlocalized-scaffold	24465		161	X_unloc_140
+GCF_943734735.2	Primary Assembly	X			CALSDY020000141.1	Chromosome	NW_026902600.1	unlocalized-scaffold	23363		161	X_unloc_141
+GCF_943734735.2	Primary Assembly	X			CALSDY020000142.1	Chromosome	NW_026902601.1	unlocalized-scaffold	22709		161	X_unloc_142
+GCF_943734735.2	Primary Assembly	X			CALSDY020000143.1	Chromosome	NW_026902602.1	unlocalized-scaffold	22708		161	X_unloc_143
+GCF_943734735.2	Primary Assembly	X			CALSDY020000144.1	Chromosome	NW_026902603.1	unlocalized-scaffold	22555		161	X_unloc_144
+GCF_943734735.2	Primary Assembly	X			CALSDY020000145.1	Chromosome	NW_026902604.1	unlocalized-scaffold	22486		161	X_unloc_145
+GCF_943734735.2	Primary Assembly	X			CALSDY020000146.1	Chromosome	NW_026902605.1	unlocalized-scaffold	22469		161	X_unloc_146
+GCF_943734735.2	Primary Assembly	X			CALSDY020000147.1	Chromosome	NW_026902606.1	unlocalized-scaffold	22424		161	X_unloc_147
+GCF_943734735.2	Primary Assembly	X			CALSDY020000148.1	Chromosome	NW_026902607.1	unlocalized-scaffold	22389		161	X_unloc_148
+GCF_943734735.2	Primary Assembly	X			CALSDY020000149.1	Chromosome	NW_026902608.1	unlocalized-scaffold	22304		161	X_unloc_149
+GCF_943734735.2	Primary Assembly	X			CALSDY020000150.1	Chromosome	NW_026902610.1	unlocalized-scaffold	21931		161	X_unloc_150
+GCF_943734735.2	Primary Assembly	X			CALSDY020000151.1	Chromosome	NW_026902611.1	unlocalized-scaffold	21229		161	X_unloc_151
+GCF_943734735.2	Primary Assembly	X			CALSDY020000152.1	Chromosome	NW_026902612.1	unlocalized-scaffold	21011		161	X_unloc_152
+GCF_943734735.2	Primary Assembly	X			CALSDY020000153.1	Chromosome	NW_026902613.1	unlocalized-scaffold	20642		161	X_unloc_153
+GCF_943734735.2	Primary Assembly	X			CALSDY020000154.1	Chromosome	NW_026902614.1	unlocalized-scaffold	20409		161	X_unloc_154
+GCF_943734735.2	Primary Assembly	X			CALSDY020000155.1	Chromosome	NW_026902615.1	unlocalized-scaffold	20295		161	X_unloc_155
+GCF_943734735.2	Primary Assembly	X			CALSDY020000156.1	Chromosome	NW_026902616.1	unlocalized-scaffold	19932		161	X_unloc_156
+GCF_943734735.2	Primary Assembly	X			CALSDY020000157.1	Chromosome	NW_026902617.1	unlocalized-scaffold	19375		161	X_unloc_157
+GCF_943734735.2	Primary Assembly	X			CALSDY020000158.1	Chromosome	NW_026902618.1	unlocalized-scaffold	19277		161	X_unloc_158
+GCF_943734735.2	Primary Assembly	X			CALSDY020000159.1	Chromosome	NW_026902619.1	unlocalized-scaffold	18880		161	X_unloc_159
+GCF_943734735.2	Primary Assembly	X			CALSDY020000160.1	Chromosome	NW_026902621.1	unlocalized-scaffold	17445		161	X_unloc_160
+GCF_943734735.2	Primary Assembly	X			CALSDY020000161.1	Chromosome	NW_026902622.1	unlocalized-scaffold	15611		161	X_unloc_161
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000162.1	Chromosome	NW_026902714.1	unplaced-scaffold	1857981			scaffold_12
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000163.1	Chromosome	NW_026902715.1	unplaced-scaffold	1006555			scaffold_14
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000164.1	Chromosome	NW_026902716.1	unplaced-scaffold	621916			scaffold_18
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000165.1	Chromosome	NW_026902717.1	unplaced-scaffold	512852			scaffold_20
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000166.1	Chromosome	NW_026902718.1	unplaced-scaffold	437732			scaffold_22
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000167.1	Chromosome	NW_026902719.1	unplaced-scaffold	436019			scaffold_23
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000168.1	Chromosome	NW_026902720.1	unplaced-scaffold	355906			scaffold_26
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000169.1	Chromosome	NW_026902721.1	unplaced-scaffold	305253			scaffold_27
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000170.1	Chromosome	NW_026902722.1	unplaced-scaffold	281477			scaffold_29
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000171.1	Chromosome	NW_026902723.1	unplaced-scaffold	279862			scaffold_30
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000172.1	Chromosome	NW_026902724.1	unplaced-scaffold	249585			scaffold_32
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000173.1	Chromosome	NW_026902725.1	unplaced-scaffold	159622			scaffold_38
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000174.1	Chromosome	NW_026902726.1	unplaced-scaffold	96888			scaffold_51
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000175.1	Chromosome	NW_026902727.1	unplaced-scaffold	82596			scaffold_57
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000176.1	Chromosome	NW_026902728.1	unplaced-scaffold	77563			scaffold_61
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000177.1	Chromosome	NW_026902729.1	unplaced-scaffold	72556			scaffold_67
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000178.1	Chromosome	NW_026902730.1	unplaced-scaffold	56321			scaffold_78
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000179.1	Chromosome	NW_026902731.1	unplaced-scaffold	42674			scaffold_104
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000180.1	Chromosome	NW_026902732.1	unplaced-scaffold	38707			scaffold_115
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000181.1	Chromosome	NW_026902733.1	unplaced-scaffold	30034			scaffold_147
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000182.1	Chromosome	NW_026902734.1	unplaced-scaffold	28223			scaffold_158
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000183.1	Chromosome	NW_026902735.1	unplaced-scaffold	27025			scaffold_165
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000184.1	Chromosome	NW_026902736.1	unplaced-scaffold	23854			scaffold_185
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000185.1	Chromosome	NW_026902737.1	unplaced-scaffold	144626			scaffold_40
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000186.1	Chromosome	NW_026902738.1	unplaced-scaffold	133795			scaffold_41
+GCF_943734735.2	Primary Assembly	Un			CALSDY020000187.1	Chromosome	NW_026902739.1	unplaced-scaffold	127879			scaffold_42
+GCF_943734735.2	non-nuclear	MT	3444	22.5	OX030910.2	Mitochondrion	NC_083487.1	assembled-molecule	15363			scaffold_MT

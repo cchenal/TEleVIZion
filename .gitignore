@@ -1,15 +1,21 @@
 .venv_televizion/*
 
-analyses/*
-# analyses/legacy
-# analyses/AcolN3/*
-# analyses/qqMarElec17/*
-# analyses/qqMarElec17_CHR10/*
-# analyses/qqMarMung10/*
-# analyses/qqMarSpei1/*
-# analyses/farm_logs/*
+analyses/legacy
+analyses/AcolN3
+analyses/qqMar*
+analyses/farm_logs
+analyses/examples/
 
-data/*
+data/examples/annotation_GCF_943734735.2.gff
+# data/examples/chroms_metadata_GCA_943734735.2.tsv
+data/examples/edta_GCA_943734735.2.gff
+# data/examples/gc_content_GCA_943734735.2_100000.tsv
+# data/examples/gene_content_GCA_943734735.2_20000.bed
+# data/examples/repeatmasker_GCA_943734735.2.divsum
+# data/examples/repeatmasker_GCA_943734735.2.out
+# data/examples/sequence_report.tsv
+data/AcolN3
+data/peacock_spiders
 
 .DS_Store
 data/.DS_Store
