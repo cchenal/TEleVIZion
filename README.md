@@ -402,6 +402,8 @@ All outputs are written below:
 analyses/<name>/
 ```
 
+Each run creates a fresh `analyses/<name>/<name>.log` containing the workflow's standard output. During execution, the terminal displays only the start and finish messages; standard error remains attached to the terminal and is not written to the log.
+
 ### Whole-genome summary plots
 
 A repeat family may have many short insertions but relatively little genomic coverage, while another may have fewer, much longer insertions that occupy a large fraction of the genome. Reporting both provides a more complete picture of repeat composition and expansion. Both metrics are important because they capture different aspects of **repeat abundance**.

@@ -402,4 +402,14 @@ def plot_karyotype_tracks(
             "--legend-colors", str(legend_colors),
         ])
     print(shlex.join(cmd))
-    subprocess.run(cmd, check=True)
+    process = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        text=True,
+        bufsize=1,
+    )
+    for line in process.stdout:
+        print(line, end="", flush=True)
+    return_code = process.wait()
+    if return_code != 0:
+        raise subprocess.CalledProcessError(return_code, cmd)

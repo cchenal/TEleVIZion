@@ -4,6 +4,8 @@ python3 scripts/televizion_cli.py --name MyGenome --genome data/Acol_lib_GCA_943
 """
 
 import argparse
+import os
+from contextlib import redirect_stdout
 
 from televizion import aggregation as televizion_aggregation
 from televizion import io as televizion_io
@@ -181,11 +183,7 @@ def parse_args():
     return args
 
 
-def main():
-    print("\nTEleVIZion is on!\n")
-
-    args = parse_args()
-
+def run_analysis(args):
     name = args.name
     genome = args.genome
     gc_content = args.gc
@@ -226,7 +224,7 @@ def main():
     )
 
 
-    print("\nInputs")
+    print("Inputs")
     print(f"- name: {name}")
     print(f"- genome: {genome}")
     print(f"- gc content: {gc_content}")
@@ -249,7 +247,7 @@ def main():
         print(f"- karyotype zoom: {zoom}")
     else:
         print("- karyotype zoom: full selected chromosomes")
-    print("\n")
+    print(f"\n")
 
     kimura_bed = None
     identity_bed = None
@@ -375,6 +373,19 @@ def main():
         output_formats=output_formats,
         dpi=dpi,
     )
+
+
+def main():
+    args = parse_args()
+    output_dir = os.path.join("analyses", args.name)
+    os.makedirs(output_dir, exist_ok=True)
+    log_path = os.path.join(output_dir, f"{args.name}.log")
+
+    print("\nTEleVIZion is on!\n")
+    with open(log_path, "w", encoding="utf-8") as log_file:
+        with redirect_stdout(log_file):
+            run_analysis(args)
+    print("\nTEleVIZion has turned off :)\n")
 
 
 if __name__ == "__main__":

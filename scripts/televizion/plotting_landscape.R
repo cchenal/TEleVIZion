@@ -1,9 +1,11 @@
-cat("\n### IMPORTING LIBRARIES ###\n\n")
+cat("\n# Importing libraries\n")
 
-library(karyoploteR)
-library(optparse)
+suppressPackageStartupMessages({
+  library(karyoploteR)
+  library(optparse)
+})
 
-cat("\n### PARSING ARGUMENTS ###\n\n")
+cat("\n# Parsing arguments\n")
 
 option_list <- list(
   make_option(c("-n", "--name"), type="character", default=NULL,
@@ -156,7 +158,7 @@ if (!is.null(opt$identity)) {
   }
 }
 
-cat("\n### CODE ###\n\n")
+cat("\n# Running code\n")
 
 parse_zoom_region <- function(region) {
   region <- trimws(region)
