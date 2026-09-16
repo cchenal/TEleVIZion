@@ -142,9 +142,9 @@ Outputs are written under:
 analyses/<name>/
 ```
 
-**Important**: chromosome IDs must agree
+**Important**: chromosome identifiers must agree
 
-The chromosome or scaffold IDs in the `chr` column of the genome metadata must match the sequence IDs used in the annotation file. `--chromtoplot` also expects these true sequence IDs, rather than the prettier display labels in the metadata `name` column. This is one of the most important checks to make before running TEleVIZion.
+Repeat annotations may identify a chromosome or scaffold using either the `chr` value or its corresponding `name` value from the genome metadata. TEleVIZion resolves `name` aliases back to canonical `chr` identifiers. `--chromtoplot` still expects canonical `chr` identifiers rather than display labels.
 
 For a guided example that starts from genome files and builds the required inputs, see the [tutorial](analyses/README.md).
 
@@ -222,16 +222,15 @@ These can also be useful for downstream analysis.
 
 The [genome metadata file](data/examples/chroms_metadata_GCA_943734735.2.tsv) defines the chromosomes or scaffolds to plot. It is a tab-delimited file.
 
-Columns:
+Columns: 
 
-- `chr`: chromosome or scaffold ID used in the annotation file.
+- `chr`: canonical chromosome or scaffold ID used internally and in output tables.
 - `start`: usually `1`.
 - `end`: sequence length in bp.
 - `name`: display label used on the karyotype plot.
 - `gieStain`: cytoband-like colour label consumed by `karyoploteR`; `chalk` or `gneg` are common simple values.
 
-The `chr` values must match the sequence IDs in your annotation file. The `name` values can be prettier labels, for example using
-`OX030907.1` as the true sequence ID while displaying `2RL` on the plot. 
+Repeat annotation sequence IDs may match either column: exact `chr` matches take priority, while matching `name` values are translated to their canonical `chr`. The `name` values must be unique. For example, annotations may use either `OX030907.1` or its display alias `2RL`; outputs continue to use `OX030907.1`.
 
 You can [generate a starter metadata file](scripts/utils/create_chroms.py) from the `.fasta` file used to create the annotation file (see the [tutorial](analyses/README.md)). If an NCBI sequence report is available, it can also be supplied to the helper where appropriate.
 
@@ -366,7 +365,7 @@ The CLI options fall naturally into four groups:
 | Option             | Required?                              | Value / format                      | Default          | Purpose                                                                                            | Notes / constraints                                                                                    |
 | ------------------ | -------------------------------------- | ----------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `--name`           | No                                     | string                              | `output`         | Sets the run name and output prefix.                                                               | Outputs are grouped under the corresponding analysis directory.                                        |
-| `--genome`         | **Yes**                                | path to TSV                         | —                | Genome metadata defining chromosome/scaffold coordinates and display names.                        | Chromosome IDs must correspond to those in the repeat annotation.                                      |
+| `--genome`         | **Yes**                                | path to TSV                         | —                | Genome metadata defining chromosome/scaffold coordinates and display names.                        | Repeat annotations may use matching `chr` or unique `name` values.                                      |
 | `--repeatmasker`   | **One of RepeatMasker / EDTA / TRASH** | path to `.out`                      | —                | Uses RepeatMasker annotations as repeat input.                                                     | Mutually exclusive with `--edta` and `--trash`. Required when `--kimura` is used.                      |
 | `--edta`           | **One of RepeatMasker / EDTA / TRASH** | path to GFF3                        | —                | Uses EDTA annotations as repeat input.                                                             | Mutually exclusive with `--repeatmasker` and `--trash`. Cannot be combined with `--kimura`.            |
 | `--trash`          | **One of RepeatMasker / EDTA / TRASH** | path to CSV                         | —                | Uses a TRASH summary file as repeat input.                                                         | Mutually exclusive with `--repeatmasker` and `--edta`. Cannot be combined with `--kimura`.             |
@@ -547,7 +546,7 @@ Important code paths:
 
 ### The karyotype is empty or chromosomes are missing
 
-Check that chromosome IDs in the annotation match the `chr` column of the genome metadata.
+Check that chromosome IDs in the annotation match either the `chr` or `name` column of the genome metadata. Unmatched identifiers are skipped and listed in the run log.
 
 Also remember that `--chromtoplot` expects these IDs, not the display labels in `name`, unless the two are identical.
 

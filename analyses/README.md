@@ -203,7 +203,7 @@ Multiple sequence IDs can be supplied as a comma-separated list:
 --chromtoplot OX030907.1,OX030908.1
 ```
 
-**Important:** `--chromtoplot` expects the sequence IDs from the `chr` column of the genome metadata, not the prettier labels from its `name` column.
+**Important:** `--chromtoplot` expects the sequence IDs from the `chr` column of the genome metadata, not the prettier labels from its `name` column. Repeat annotation records themselves may use either canonical `chr` IDs or matching, unique `name` aliases; aliases are converted back to `chr` IDs for output.
 
 ## 7. Generating per-chromosome summaries
 
