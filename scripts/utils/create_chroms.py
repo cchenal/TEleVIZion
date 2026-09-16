@@ -108,8 +108,11 @@ def load_sequence_names(report_path):
             )
 
         for row in reader:
-            accession = row["GenBank seq accession"].strip()
-            sequence_name = row["Sequence name"].strip()
+            # accession = row["GenBank seq accession"].strip()      # An. gambiae s.s.
+            # sequence_name = row["Sequence name"].strip()          # An. gambiae s.s.
+            accession = row["RefSeq seq accession"].strip()         # Human T2T
+            sequence_name = row["UCSC style name"].strip()          # Human T2T
+            
 
             if accession and sequence_name:
                 names[accession] = sequence_name

@@ -8,6 +8,44 @@ import numpy as np
 from .aggregation import split_overlaps
 
 
+def build_chromosome_aliases(windows_dict, chrom_names):
+    """Map metadata `chr` and `name` values to canonical `chr` identifiers."""
+    canonical_chromosomes = set(windows_dict)
+    aliases = {chrom: chrom for chrom in canonical_chromosomes}
+
+    for chrom, display_name in chrom_names.items():
+        display_name = display_name.strip()
+        if not display_name or display_name == chrom:
+            continue
+        # Exact canonical identifiers take priority over conflicting aliases.
+        if display_name in canonical_chromosomes:
+            continue
+        existing = aliases.get(display_name)
+        if existing is not None and existing != chrom:
+            raise ValueError(
+                f"Ambiguous chromosome metadata: name {display_name!r} is "
+                f"assigned to both {existing!r} and {chrom!r}."
+            )
+        aliases[display_name] = chrom
+
+    return aliases
+
+
+def _prepare_chromosome_aliases(windows_dict, chromosome_aliases):
+    if chromosome_aliases is None:
+        return {chrom: chrom for chrom in windows_dict}
+    return chromosome_aliases
+
+
+def _report_unmatched_chromosomes(unmatched_chromosomes):
+    if unmatched_chromosomes:
+        names = ", ".join(sorted(unmatched_chromosomes))
+        print(
+            "Warning! Annotation chromosome name(s) did not match either the "
+            f"chr or name column in the genome metadata and were skipped: {names}\n"
+        )
+
+
 def parse_repeatmasker_kimura_bins(repeatmasker_kimura_file):
     """
     Parse RepeatMasker Kimura .divsum file into per-element bins.
@@ -70,7 +108,9 @@ def id_category(value):
     else:
         return "0.6-0"
 
-def parse_repeatmasker_annotations(repeatmasker_file, windows_dict, kimura_dict=None):
+def parse_repeatmasker_annotations(
+    repeatmasker_file, windows_dict, kimura_dict=None, chromosome_aliases=None
+):
     """
     Parse RepeatMasker .out annotations into per-window insertion summaries.
 
@@ -84,11 +124,20 @@ def parse_repeatmasker_annotations(repeatmasker_file, windows_dict, kimura_dict=
     repeats = {}
     entries_by_chrom = {}
     counters = {}
+    chromosome_aliases = _prepare_chromosome_aliases(
+        windows_dict, chromosome_aliases
+    )
+    unmatched_chromosomes = set()
 
     with open(repeatmasker_file, "r") as handle:
         for line in handle:
             fields = line.split()
             if len(fields) <= 1 or not fields[0][0].isnumeric():
+                continue
+            raw_chrom = fields[4]
+            chrom = chromosome_aliases.get(raw_chrom)
+            if chrom is None:
+                unmatched_chromosomes.add(raw_chrom)
                 continue
             classification = fields[10].split("/")
             rep_class = classification[0]
@@ -103,7 +152,6 @@ def parse_repeatmasker_annotations(repeatmasker_file, windows_dict, kimura_dict=
                 repeats[rep_class][rep_family] = 0
             repeats[rep_class][rep_family] += 1
 
-            chrom = fields[4]
             start = min(int(fields[5]), int(fields[6]))
             end = max(int(fields[5]), int(fields[6]))
             counter = counters.get(chrom, 0)
@@ -120,6 +168,8 @@ def parse_repeatmasker_annotations(repeatmasker_file, windows_dict, kimura_dict=
                     "divergence": float(fields[1]),
                 }
             )
+
+    _report_unmatched_chromosomes(unmatched_chromosomes)
 
     insertions = {}
     for chrom in windows_dict:
@@ -278,7 +328,7 @@ def parse_repeatmasker_annotations(repeatmasker_file, windows_dict, kimura_dict=
         return (repeats, insertions, repeatmasker_id)
 
 
-def parse_edta_annotations(edta_file, windows_dict):
+def parse_edta_annotations(edta_file, windows_dict, chromosome_aliases=None):
     """
     Parse EDTA GFF3 annotations into per-window insertion summaries.
 
@@ -299,6 +349,10 @@ def parse_edta_annotations(edta_file, windows_dict):
     repeats = {}
     entries_by_chrom = {}
     counters = {}
+    chromosome_aliases = _prepare_chromosome_aliases(
+        windows_dict, chromosome_aliases
+    )
+    unmatched_chromosomes = set()
 
     with open(edta_file, "r") as handle:
         for line in handle:
@@ -307,7 +361,11 @@ def parse_edta_annotations(edta_file, windows_dict):
             fields = line.rstrip("\n").split("\t")
             if len(fields) < 9:
                 continue
-            chrom = fields[0]
+            raw_chrom = fields[0]
+            chrom = chromosome_aliases.get(raw_chrom)
+            if chrom is None:
+                unmatched_chromosomes.add(raw_chrom)
+                continue
             start = min(int(fields[3]), int(fields[4]))
             end = max(int(fields[3]), int(fields[4]))
             attrs = _parse_attributes(fields[8])
@@ -342,6 +400,8 @@ def parse_edta_annotations(edta_file, windows_dict):
                     "match_identity": identity,
                 }
             )
+
+    _report_unmatched_chromosomes(unmatched_chromosomes)
 
     insertions = {}
     for chrom in windows_dict:
@@ -432,12 +492,16 @@ def parse_edta_annotations(edta_file, windows_dict):
     return (repeats, insertions)
 
 
-def parse_trash_annotations(trash_file, windows_dict):
+def parse_trash_annotations(trash_file, windows_dict, chromosome_aliases=None):
     print("# Running parse_trash_annotations function\n")
 
     repeats = {}
     entries_by_chrom = {}
     counters = {}
+    chromosome_aliases = _prepare_chromosome_aliases(
+        windows_dict, chromosome_aliases
+    )
+    unmatched_chromosomes = set()
 
     with open(trash_file, "r", newline="") as handle:
         reader = csv.DictReader(handle)
@@ -453,7 +517,11 @@ def parse_trash_annotations(trash_file, windows_dict):
             )
 
         for row_number, row in enumerate(reader, start=2):
-            chrom = row["name"]
+            raw_chrom = row["name"]
+            chrom = chromosome_aliases.get(raw_chrom)
+            if chrom is None:
+                unmatched_chromosomes.add(raw_chrom)
+                continue
 
             try:
                 raw_start = int(row["start"])
@@ -523,6 +591,8 @@ def parse_trash_annotations(trash_file, windows_dict):
                     "match_identity": identity,
                 }
             )
+
+    _report_unmatched_chromosomes(unmatched_chromosomes)
 
     # Initialise insertion structure
     insertions = {}

@@ -222,6 +222,10 @@ def run_analysis(args):
         window_size=window_size,
         chrom_to_plot=chrom_to_plot,
     )
+    chromosome_aliases = televizion_io.build_chromosome_aliases(
+        windows_dict=windows,
+        chrom_names=chrom_names,
+    )
 
 
     print("Inputs")
@@ -262,6 +266,7 @@ def run_analysis(args):
             repeats, insertions, kimura_div = televizion_io.parse_repeatmasker_annotations(
                 repeatmasker_file=input_path,
                 windows_dict=windows,
+                chromosome_aliases=chromosome_aliases,
                 kimura_dict=kimura_dict,
             )
         else:
@@ -272,16 +277,19 @@ def run_analysis(args):
             ) = televizion_io.parse_repeatmasker_annotations(
                 repeatmasker_file=input_path,
                 windows_dict=windows,
+                chromosome_aliases=chromosome_aliases,
             )
     elif args.edta is not None:
         repeats, insertions = televizion_io.parse_edta_annotations(
             edta_file=input_path,
             windows_dict=windows,
+            chromosome_aliases=chromosome_aliases,
         )
     else:
         repeats, insertions = televizion_io.parse_trash_annotations(
             trash_file=input_path,
             windows_dict=windows,
+            chromosome_aliases=chromosome_aliases,
         )
 
     agg_global, class_order, class_colors_hex, fam_colors = televizion_plotting_stats.build_color_maps(

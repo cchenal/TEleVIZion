@@ -327,7 +327,7 @@ plot_type <- if (layout_mode == "vertical") 2 else 3
 n_chr <- length(chromosome_order)
 plot_width <- 11.417
 plot_height <- if (layout_mode == "vertical") 1.3 * n_chr + 2 else 3.937
-plot_font_family <- "DejaVu Sans"
+plot_font_family <- "sans"
 
 plot_file <- function(stem, output_format) {
   output_prefix <- opt$output
@@ -341,11 +341,11 @@ plot_file <- function(stem, output_format) {
 
 open_plot_device <- function(file, output_format) {
   if (output_format == "pdf") {
-    cairo_pdf(file, width = plot_width, height = plot_height, family = plot_font_family)
+    pdf(file, width = plot_width, height = plot_height, family = "Helvetica")
   } else if (output_format == "png") {
-    png(file, width = plot_width, height = plot_height, units = "in", res = output_dpi, type = "cairo")
+    png(file, width = plot_width, height = plot_height, units = "in", res = output_dpi)
   } else if (output_format == "jpg") {
-    jpeg(file, width = plot_width, height = plot_height, units = "in", res = output_dpi, quality = 95, type = "cairo")
+    jpeg(file, width = plot_width, height = plot_height, units = "in", res = output_dpi, quality = 95)
   }
 }
 
