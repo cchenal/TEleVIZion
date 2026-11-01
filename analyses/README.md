@@ -6,16 +6,16 @@ This tutorial demonstrates the main [TEleVIZion](../README.md) workflows using t
 
 ```text
 data/examples/
-├── annotation_GCF_943734735.2.gff            # hidden (GitHub repository size limits)
+├── annotation_GCF_943734735.2.gff            # download it here: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/943/734/735/GCF_943734735.2_idAnoGambNW_F1_1/GCF_943734735.2_idAnoGambNW_F1_1_genomic.gff.gz
 ├── chroms_metadata_GCA_943734735.2.tsv
-├── edta_GCA_943734735.2.gff                  # hidden (GitHub repository size limits)
+├── edta_GCA_943734735.2.gff                  # X chromosome only (GitHub repository size limits)
 ├── gc_content_GCA_943734735.2_100000.tsv
 ├── gene_content_GCA_943734735.2_20000.bed
-├── genome_GCA_943734735.2.fasta              # hidden (GitHub repository size limits)
+├── genome_GCA_943734735.2.fasta              # download it here: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/943/734/735/GCF_943734735.2_idAnoGambNW_F1_1/GCF_943734735.2_idAnoGambNW_F1_1_genomic.fna.gz
 ├── repeatmasker_GCA_943734735.2.divsum
 ├── repeatmasker_GCA_943734735.2.out
 ├── sequence_report.tsv
-└── trash_summary_GCA_943734735.2.csv         # hidden (GitHub repository size limits)
+└── trash_summary_GCA_943734735.2.csv         # X chromosome only (GitHub repository size limits)
 ```
 
 All commands below should be run from the **root of the TEleVIZion repository**.
@@ -38,7 +38,7 @@ python3 scripts/televizion_cli.py --help
 
 The simplest analysis requires:
 
-1. genome metadata;
+1. [genome metadata](../data/examples/chroms_metadata_GCA_943734735.2);
 2. repeat annotations; and
 3. optionally, a name and window size for the analysis.
 
