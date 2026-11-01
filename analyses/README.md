@@ -8,14 +8,14 @@ This tutorial demonstrates the main [TEleVIZion](../README.md) workflows using t
 data/examples/
 ├── annotation_GCF_943734735.2.gff            # download it here: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/943/734/735/GCF_943734735.2_idAnoGambNW_F1_1/GCF_943734735.2_idAnoGambNW_F1_1_genomic.gff.gz
 ├── chroms_metadata_GCA_943734735.2.tsv
-├── edta_GCA_943734735.2.gff                  # X chromosome only (GitHub repository size limits)
+├── edta_GCA_943734735.2.gff
 ├── gc_content_GCA_943734735.2_100000.tsv
 ├── gene_content_GCA_943734735.2_20000.bed
 ├── genome_GCA_943734735.2.fasta              # download it here: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/943/734/735/GCF_943734735.2_idAnoGambNW_F1_1/GCF_943734735.2_idAnoGambNW_F1_1_genomic.fna.gz
 ├── repeatmasker_GCA_943734735.2.divsum
 ├── repeatmasker_GCA_943734735.2.out
 ├── sequence_report.tsv
-└── trash_summary_GCA_943734735.2.csv         # X chromosome only (GitHub repository size limits)
+└── trash_summary_GCA_943734735.2.csv
 ```
 
 All commands below should be run from the **root of the TEleVIZion repository**.
