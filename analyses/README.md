@@ -38,7 +38,7 @@ python3 scripts/televizion_cli.py --help
 
 The simplest analysis requires:
 
-1. [genome metadata](../data/examples/chroms_metadata_GCA_943734735.2);
+1. genome metadata;
 2. repeat annotations; and
 3. optionally, a name and window size for the analysis.
 
