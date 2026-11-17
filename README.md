@@ -1,5 +1,7 @@
 # TEleVIZion
 
+[![DOI](https://zenodo.org/badge/992545903.svg)](https://doi.org/10.5281/zenodo.24317548)
+
 TEleVIZion is a research workflow for visualising transposable element (TE) and repeat annotations across genomes. This version converts **RepeatMasker**, **EDTA** or **TRASH** output into windowed genome summaries, whole-genome bar plots, and chromosome-scale karyotype plots **in a single command-line**.
 
 TEleVIZion is designed for exploratory and comparative genomics: choose the chromosomes or scaffolds you want to inspect, select an appropriate window size, and generate a consistent set of figures and reusable intermediate tables. Already hyped? Go directly to the [tutorial](analyses/README.md)!
