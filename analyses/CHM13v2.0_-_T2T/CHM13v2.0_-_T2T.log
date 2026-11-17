@@ -1,0 +1,51 @@
+
+
+# Running build_windows function
+
+Inputs
+- name: CHM13v2.0_-_T2T
+- genome: /lustre/scratch126/tol/teams/lawniczak/users/cc54/projects/TEleVIZion/data/human_T2T/chroms_metadata_GCF_009914755.1.tsv
+- gc content: /lustre/scratch126/tol/teams/lawniczak/users/cc54/projects/TEleVIZion/data/human_T2T/gc_content_GCF_009914755.1_100000.tsv
+- gene content: None
+- input (RepeatMasker): /lustre/scratch126/tol/teams/lawniczak/users/cc54/projects/TEleVIZion/data/human_T2T/hs1.fa.out
+- kimura: /lustre/scratch126/tol/teams/lawniczak/users/cc54/projects/TEleVIZion/data/human_T2T/hs1.fa.divsum
+
+Options
+- window size: 500000
+- chromosomes to plot: all
+- classes order: None
+- per chromosome: False
+- per class: False
+- general statistics figure size: 14, 14
+- output formats: png
+- raster output dpi: 600
+- palette: default
+- layout: vertical
+- karyotype zoom: full selected chromosomes
+
+
+# Running parse_repeatmasker_kimura_bins function
+
+# Running parse_repeatmasker_annotations function
+
+Warning! Annotation chromosome name(s) did not match either the chr or name column in the genome metadata and were skipped: chrM
+
+Warning! Kimura bins were missing for 14434 repeat element(s); those insertions were excluded from the Kimura panel.
+
+# Running build_color_maps function
+
+# Running plot_repeat_family_bars function
+
+# Running export_window_class_table function
+
+# Running export_window_kimura_table function
+
+# Running plot_karyotype_tracks function
+
+Rscript scripts/televizion/plotting_landscape.R --name CHM13v2.0_-_T2T --genome /lustre/scratch126/tol/teams/lawniczak/users/cc54/projects/TEleVIZion/data/human_T2T/chroms_metadata_GCF_009914755.1.tsv --chromosomes-order NC_060925.1,NC_060926.1,NC_060927.1,NC_060928.1,NC_060929.1,NC_060930.1,NC_060931.1,NC_060932.1,NC_060933.1,NC_060934.1,NC_060935.1,NC_060936.1,NC_060937.1,NC_060938.1,NC_060939.1,NC_060940.1,NC_060941.1,NC_060942.1,NC_060943.1,NC_060944.1,NC_060945.1,NC_060946.1,NC_060947.1,NC_060948.1 --gene-content not_displayed --gc-content /lustre/scratch126/tol/teams/lawniczak/users/cc54/projects/TEleVIZion/data/human_T2T/gc_content_GCF_009914755.1_100000.tsv --classes-table analyses/CHM13v2.0_-_T2T/karyoplot_tables/CHM13v2.0_-_T2T_500000_repeat_classes.bed --classes-order PLE,tRNA,scRNA,srpRNA,RC,snRNA,Ambiguous,rRNA,Retroposon,Low_complexity,Unknown,Simple_repeat,DNA,Satellite,LTR,SINE,LINE --per-class False --colors-order '#7a0403ff,#a91601ff,#d02f05ff,#eb500eff,#fb7e21ff,#fdac34ff,#eecf3aff,#cdec34ff,#a4fc3cff,#6dfe62ff,#32f298ff,#18ddc2ff,#28bcebff,#4294ffff,#466be3ff,#4040a2ff,#30123bff' --output analyses/CHM13v2.0_-_T2T/CHM13v2.0_-_T2T_500000 --kimura-table analyses/CHM13v2.0_-_T2T/karyoplot_tables/CHM13v2.0_-_T2T_500000_kimura.bed --identity-table None --layout vertical --output-formats png --dpi 600
+
+# Importing libraries
+
+# Parsing arguments
+
+# Running code
